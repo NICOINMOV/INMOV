@@ -99,6 +99,23 @@ textarea{width:100%;font-family:inherit;font-size:16px;padding:12px;border:1px s
 .ok-box{background:var(--okb);color:var(--ok);border-radius:16px;padding:18px;margin-top:10px}
 .ok-box a{color:var(--ok);font-weight:600}
 .nota{font-size:13px;color:var(--g);margin:10px 0 0}
+
+.grp{margin:18px 0 2px;font-size:12px;font-weight:600;color:var(--g);text-transform:uppercase;letter-spacing:.6px}
+.hora{display:inline-block;background:var(--k);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:600;margin-right:8px;vertical-align:2px}
+.nmb{background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.nmb .nm::after{content:" ›";color:var(--g);font-weight:400}
+.libre{background:var(--wb);color:var(--w);border-radius:16px;padding:16px;margin:12px 0;font-weight:600}
+.libre button{background:none;border:0;color:var(--w);text-decoration:underline;font-size:14px;padding:0;margin-top:6px;display:block}
+.mas-dia{background:#1F1F1F;color:#fff;border:0;border-radius:12px;width:42px;height:42px;font-size:20px;font-weight:700}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.acts button{border:0;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;background:var(--l);color:var(--t)}
+.acts button.pri{background:var(--o);color:#fff}
+.dato{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--b);font-size:15px}
+.dato span:first-child{color:var(--g)}
+.dato span:last-child{font-weight:600;text-align:right}
+.cand{display:block;width:100%;text-align:left;border:1px solid var(--b);background:#fff;border-radius:12px;padding:12px;margin-top:8px;font-size:15px;color:var(--t)}
+.cand.on{border-color:var(--o);box-shadow:0 0 0 2px var(--o) inset}
+.cand small{display:block;color:var(--g);font-size:12px}
 </style>
 </head>
 <body>
@@ -135,7 +152,7 @@ function conectar(){
 /* ---------- App ---------- */
 function iniciar(){
   $('app').innerHTML='<header><div class="top"><div class="logo"><img src="logo-blanco.png" alt="INMOV"></div><button class="ref" aria-label="Actualizar" onclick="cargar()">↻</button></div>'+
-  '<div class="dia" id="dia"><h1 id="titulo"></h1><div class="flechas"><button aria-label="Día anterior" onclick="mover(-1)">‹</button><button aria-label="Día siguiente" onclick="mover(1)">›</button></div></div>'+
+  '<div class="dia" id="dia"><h1 id="titulo"></h1><div class="flechas"><button class="mas-dia" aria-label="Opciones del día" onclick="menuDia()">⋯</button><button aria-label="Día anterior" onclick="mover(-1)">‹</button><button aria-label="Día siguiente" onclick="mover(1)">›</button></div></div>'+
   '<div class="res" id="res"></div></header><main id="main"><div class="carga">Cargando…</div></main>'+
   '<nav><button id="n-hoy" class="on" onclick="ver(\'hoy\')"><span class="ic">✓</span>Sesiones</button>'+
   '<button id="n-pag" onclick="ver(\'pag\')"><span class="ic">$</span>Pagos</button>'+
@@ -167,18 +184,30 @@ function pintar(){
   if(vista==='hoy'){
     var ps=presenciales(),hechos=ps.filter(function(c){return c.hoy}).length;
     $('res').textContent=ps.length?hechos+' de '+ps.length+' registrados':'';
-    ps.forEach(function(c){
+    if(D.diaLibre)h+='<div class="libre">Sin clases este día · '+esc(D.diaLibre)+'<button onclick="quitarLibre()">Quitar (sí hubo clases)</button></div>';
+    var toca=ps.filter(function(c){return c.toca}),otros=ps.filter(function(c){return !c.toca});
+    var fila=function(c){
       var q=num(c.restantes)?'<span class="q'+(c.restantes<=2?' poco':'')+'">Quedan '+c.restantes+'</span>':'Sin pago registrado';
-      h+='<div class="cli"><div class="nm">'+esc(c.nombre)+'</div><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+'</div>';
-      if(c.hoy){var ok=c.hoy.indexOf('Asistió')===0;h+='<div class="hecho'+(ok?'':' no')+'"><span>'+(ok?'✓ ':'')+esc(c.hoy)+'</span><button onclick="deshacer(\''+c.id+'\')">Deshacer</button></div>'}
-      else h+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>';
-      h+='</div>'});
-    if(!h)h='<div class="vacio"><strong>Sin clientes presenciales activos</strong></div>'}
+      var x='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+(c.toca&&c.hora?'<span class="hora">'+esc(c.hora)+'</span>':'')+esc(c.nombre)+'</div></button><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+'</div>';
+      if(c.hoy){var ok=c.hoy.indexOf('Asistió')===0;x+='<div class="hecho'+(ok?'':' no')+'"><span>'+(ok?'✓ ':'')+esc(c.hoy)+'</span><button onclick="deshacer(\''+c.id+'\')">Deshacer</button></div>'}
+      else if(!D.diaLibre)x+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>';
+      return x+'</div>'};
+    if(toca.length){h+='<div class="grp">Les toca hoy</div>';toca.forEach(function(c){h+=fila(c)})}
+    if(otros.length){h+='<div class="grp">'+(toca.length?'Otros clientes':'Clientes')+'</div>';otros.forEach(function(c){h+=fila(c)})}
+    if(!ps.length)h='<div class="vacio"><strong>Sin clientes presenciales activos</strong></div>'}
   if(vista==='pag'){$('res').textContent='Toca un cliente para registrar su pago';
     D.pagadores.forEach(function(p){h+='<button class="pg" onclick="pago(\''+p.id+'\')"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+(num(p.restantes)?'Quedan '+p.restantes+' sesiones':'Plan online')+(p.vence?', referencia '+esc(p.vence):'')+'</div>'+tag(p.pago)+'</div><span class="mas">+</span></button>'})}
   if(vista==='ale'){$('res').textContent=n?n+(n===1?' cliente':' clientes'):'';
     if(!n)h='<div class="vacio"><strong>Todo al día</strong>No hay renovaciones, cierres ni ausencias pendientes.</div>';
-    else D.alertas.forEach(function(a){h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+(a.meso?'<div style="margin-top:10px"><a class="lnk" href="'+esc(a.meso)+'" target="_blank" rel="noopener">Abrir MESO</a></div>':'')+'</div>'});
+    else D.alertas.forEach(function(a){
+      var b='';
+      if(/plazo/.test(a.texto))b+='<button class="pri" onclick="extender(\''+a.pagador+'\',7)">Extender 1 semana</button><button onclick="extender(\''+a.pagador+'\',14)">2 semanas</button>';
+      if(/Agotado|Por agotar|Vencido|Por vencer|Sin registro/.test(a.texto))b+='<button'+(b?'':' class="pri"')+' onclick="pago(\''+a.pagador+'\')">Registrar pago</button>';
+      if(/Bloque/.test(a.texto))b+='<button onclick="nuevoMeso(\''+a.id+'\')">Nuevo MESO</button>';
+      b+='<button onclick="ficha(\''+a.id+'\')">Ver ficha</button>';
+      h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+'<div class="acts">'+b+'</div></div>'});
+    var pausa=D.clientes.filter(function(c){return c.estado==='Pausa'});
+    if(pausa.length){h+='<div class="grp">En pausa</div>';pausa.forEach(function(c){h+='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+esc(c.nombre)+'</div></button><div class="acts"><button onclick="estado(\''+c.id+'\',\'Activo\')">Reactivar</button></div></div>'})}
     h+='<div style="text-align:center;margin:22px 0 8px"><a class="lnk" href="'+esc(D.planilla)+'" target="_blank" rel="noopener">Abrir planilla completa</a></div>'}
   if(vista==='nue'){$('res').textContent='';$('main').innerHTML='';pintaNuevo();return}
   $('main').innerHTML=h;
@@ -196,7 +225,7 @@ function enviar(id,estado,r){cerrar();var c=cli(id);c.hoy=estado;pintar();toast(
   .catch(function(e){c.hoy='';pintar();toast('No se guardó: '+e.message,4000)})}
 function deshacer(id){toast('Deshaciendo…',8000);api({a:'deshacer',id:id,fecha:iso(fecha)}).then(function(){cli(id).hoy='';pintar();toast('Deshecho');setTimeout(cargar,2500)})
   .catch(function(e){toast(e.message,4000)})}
-function pago(pid){var p=D.pagadores.filter(function(x){return x.id===pid})[0];met='Transferencia';
+function pagoForm(p){var pid=p.id;cerrar();met='Transferencia';
   var op=D.planes.map(function(pl){return '<option value="'+esc(pl.id)+'"'+(pl.id===p.plan?' selected':'')+'>'+esc(pl.nombre)+'</option>'}).join('');
   var pr=(D.planes.filter(function(x){return x.id===p.plan})[0]||{}).precio;var hoy=iso(new Date());
   abrir('<h3>Pago de '+esc(p.nombre)+'</h3><p>Revisa y confirma.</p><label for="pp">Plan</label><select id="pp" onchange="cambiaPlan()">'+op+'</select>'+
@@ -272,6 +301,50 @@ function crearNuevo(){
     cargarSilencioso()})
   .catch(function(e){toast('No se creó: '+e.message,5000);pintaNuevo()})}
 function cargarSilencioso(){api({a:'datos',fecha:iso(fecha)}).then(function(d){D=d;var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
+
+/* ---------- v3: ficha, día sin clases, plazos, MESO ---------- */
+function ficha(id){var c=cli(id);if(!c)return;
+  var d=function(a,b){return b===''||b==null?'':'<div class="dato"><span>'+a+'</span><span>'+esc(b)+'</span></div>'};
+  var h='<h3>'+esc(c.nombre)+'</h3><p>'+esc(c.modalidad)+(c.horario?' · '+esc(c.horario):'')+'</p>'+
+   d('Estado',c.estado)+d('Pago',c.pago)+d('Sesiones',num(c.periodo)?c.usadas+' de '+c.periodo+' usadas · quedan '+c.restantes:'')+
+   d('Fallos permitidos disponibles',c.fallos)+d('Plan vence (ref.)',c.vence)+d('Bloque',c.bloque?c.bloque+' · semana '+c.semana:'Sin bloque')+
+   d('Fin del bloque',c.finBloque)+d('Última asistencia',c.ultima)+d('Salud activa',c.salud?c.salud+' registro(s)':'');
+  h+='<div class="acts" style="margin-top:14px">';
+  if(c.meso)h+='<button onclick="window.open(\''+esc(c.meso)+'\',\'_blank\')">Abrir MESO</button>';
+  if(c.carpeta)h+='<button onclick="window.open(\''+esc(c.carpeta)+'\',\'_blank\')">Abrir carpeta</button>';
+  h+='</div><div class="acts">';
+  if(c.estado==='Activo'){h+='<button class="pri" onclick="nuevoMeso(\''+id+'\')">Nuevo MESO</button><button onclick="pago(\''+c.pagador+'\')">Registrar pago</button><button onclick="extender(\''+c.pagador+'\',7)">Extender plazo 1 sem</button>'}
+  h+='</div><div class="acts">';
+  if(c.estado!=='Activo')h+='<button onclick="estado(\''+id+'\',\'Activo\')">Reactivar</button>';
+  if(c.estado!=='Pausa')h+='<button onclick="estado(\''+id+'\',\'Pausa\')">Pausar</button>';
+  h+='<button onclick="estado(\''+id+'\',\'Inactivo\')" style="color:var(--r)">Dar de baja</button></div><button class="sec" onclick="cerrar()">Cerrar</button>';
+  abrir(h)}
+function pago(pid){var p=D.pagadores.filter(function(x){return x.id===pid})[0];if(!p){toast('Ese cliente no tiene un plan activo',3000);return}pagoForm(p)}
+function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactivo:'dar de baja'}[e];
+  if(!confirm('¿Quieres '+t+' a '+c.nombre+'?'+(e==='Inactivo'?'\nDejará de aparecer en la app. Su historial se conserva.':'')))return;
+  cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
+function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
+function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
+  abrir('<h3>'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
+function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
+var mesoSel='',semSel=5;
+function nuevoMeso(id){var c=cli(id);mesoSel='';abrir('<h3>Nuevo MESO · '+esc(c.nombre)+'</h3><p>Buscando en su carpeta…</p>');
+  api({a:'mesos',id:id}).then(function(l){
+    var h='<h3>Nuevo MESO · '+esc(c.nombre)+'</h3><p>'+(c.grupo?'Se aplica a las dos personas del dúo. ':'')+'Elige el archivo del nuevo MESO.</p>';
+    if(!l.length)h+='<p style="color:var(--r)">No encontré planillas nuevas en su carpeta. Crea el MESO en su carpeta de Drive y vuelve a intentarlo.</p>';
+    l.forEach(function(x,i){h+='<button class="cand'+(i===0?' on':'')+'" data-u="'+esc(x.url)+'" onclick="selMeso(this)">'+esc(x.nombre)+'<small>Creado el '+esc(x.fecha)+'</small></button>'});
+    if(l.length)mesoSel=l[0].url;
+    h+='<label>¿Cuántas semanas durará?</label><div class="rpe" style="grid-template-columns:repeat(4,1fr)">'+[4,5,6,8].map(function(n){return '<button'+(n===5?' class="on"':'')+' onclick="selSem(this,'+n+')">'+n+'</button>'}).join('')+'</div>'+
+      '<label for="mi">Primer día del nuevo MESO</label><input id="mi" type="date" value="'+iso(new Date())+'">'+
+      (l.length?'<button class="big" onclick="guardaMeso(\''+id+'\')">Abrir nuevo bloque</button>':'')+'<button class="sec" onclick="cerrar()">Cancelar</button>'+
+      '<p class="nota">El bloque actual se cierra el día anterior y el nuevo copia su objetivo, split, frecuencia y RIR.</p>';
+    semSel=5;abrir(h)}).catch(function(x){toast(x.message,4000);cerrar()})}
+function selSem(b,n){semSel=n;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
+function selMeso(b){mesoSel=b.getAttribute('data-u');Array.prototype.forEach.call(document.querySelectorAll('.cand'),function(x){x.className='cand'});b.className='cand on'}
+function guardaMeso(id){var i=$('mi').value;if(!mesoSel||!i){toast('Elige el archivo y la fecha');return}cerrar();toast('Abriendo bloque…',8000);
+  api({a:'nuevoMeso',id:id,url:mesoSel,semanas:semSel,inicio:i}).then(function(){toast('Nuevo bloque abierto ✓',3000);setTimeout(cargar,2500)}).catch(function(x){toast(x.message,4000)})}
 
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'){fecha=new Date();pintaTitulo();cargar()}});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
