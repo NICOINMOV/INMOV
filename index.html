@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="INMOV">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>INMOV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--o:#FF5118;--k:#000;--t:#1A1A1A;--g:#6B6B6B;--l:#F2F2F2;--b:#E6E6E6;
+--ok:#1B6B3A;--okb:#DDF3E4;--w:#8A3B00;--wb:#FFE8D9;--r:#A11D1D;--rb:#FBDADA}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#fff}
+body{font-family:Poppins,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--t);
+padding-bottom:calc(76px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--o);outline-offset:2px}
+header{background:var(--k);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 18px 16px;position:sticky;top:0;z-index:5}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo img{height:30px;display:block}
+.ref{background:none;border:0;color:#9a9a9a;font-size:22px;padding:4px 6px}
+.dia{display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px}
+.dia h1{margin:0;font-size:30px;line-height:1.05;font-weight:700}
+.dia h1 small{display:block;font-size:13px;font-weight:500;color:var(--o);margin-bottom:4px}
+.flechas{display:flex;gap:6px}
+.flechas button{width:42px;height:42px;border-radius:12px;border:0;background:#1F1F1F;color:#fff;font-size:20px}
+.res{margin-top:12px;font-size:13px;color:#B5B5B5}
+main{padding:6px 18px 10px}
+.cli{padding:16px 0;border-bottom:1px solid var(--b)}
+.cli:last-child{border-bottom:0}
+.nm{font-weight:600;font-size:17px}
+.sub{color:var(--g);font-size:13px;margin-top:2px}
+.sub .q{color:var(--t);font-weight:600}
+.sub .q.poco{color:var(--o)}
+.acc{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-top:12px}
+.acc button{border:0;border-radius:14px;padding:14px 4px;font-size:15px;font-weight:600}
+.vino{background:var(--o);color:#fff}.avi{background:var(--l);color:var(--t)}.fal{background:var(--l);color:var(--r)}
+.hecho{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:11px 14px;border-radius:14px;background:var(--okb);color:var(--ok);font-weight:600;font-size:15px}
+.hecho.no{background:var(--wb);color:var(--w)}
+.hecho button{background:none;border:0;color:inherit;text-decoration:underline;font-size:14px;font-weight:500}
+.tag{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;margin:8px 6px 0 0}
+.t-ok{background:var(--okb);color:var(--ok)}.t-w{background:var(--wb);color:var(--w)}.t-r{background:var(--rb);color:var(--r)}
+.pg{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;text-align:left;padding:16px 0;border-bottom:1px solid var(--b);color:inherit}
+.pg .mas{color:var(--o);font-size:24px;font-weight:500}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--b);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--g);font-weight:500;position:relative}
+nav button.on{color:var(--k);font-weight:600}
+nav button.on::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--o)}
+nav .ic{display:block;font-size:20px;line-height:26px}
+.badge{display:inline-block;background:var(--o);color:#fff;border-radius:999px;min-width:18px;padding:0 5px;font-size:11px;line-height:18px;margin-left:4px}
+.capa{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:10}
+.capa.on{display:flex}
+.panel{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:sube .22s ease-out}
+@keyframes sube{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.panel{animation:none}}
+.panel h3{margin:0 0 2px;font-size:19px}.panel p{margin:0 0 14px;color:var(--g);font-size:14px}
+.rpe{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:6px 0 14px}
+.rpe button,.opt{border:1px solid var(--b);background:#fff;border-radius:12px;padding:12px 0;font-size:16px;font-weight:600;color:var(--t)}
+.rpe button.on,.opt.on{background:var(--k);border-color:var(--k);color:#fff}
+.big{width:100%;border:0;border-radius:16px;padding:16px;font-size:16px;font-weight:600;background:var(--o);color:#fff;margin-top:8px}
+.sec{width:100%;border:0;border-radius:16px;padding:15px;font-size:15px;font-weight:500;background:var(--l);color:var(--t);margin-top:8px}
+label{display:block;font-size:13px;color:var(--g);margin:12px 0 5px;font-weight:500}
+input,select{width:100%;font-family:inherit;font-size:16px;padding:12px;border:1px solid var(--b);border-radius:12px;background:#fff;color:var(--t)}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.opts .opt{font-size:14px}
+.check{display:flex;align-items:center;gap:10px;margin:4px 0 12px;font-size:15px}
+.check input{width:22px;height:22px;accent-color:var(--o)}
+.vacio{text-align:center;color:var(--g);padding:48px 16px}
+.vacio strong{display:block;font-size:20px;color:var(--t);margin-bottom:4px}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--k);color:#fff;padding:11px 18px;border-radius:14px;font-size:14px;display:none;z-index:20;white-space:nowrap}
+.carga{color:var(--g);padding:32px 0;text-align:center}
+a.lnk{color:var(--o);font-weight:600;font-size:14px;text-decoration:none}
+.conf{padding:calc(40px + env(safe-area-inset-top)) 24px 40px;background:var(--k);min-height:100vh;color:#fff}
+.conf img{height:52px;margin:0 0 18px;display:block}
+.conf p{color:#B5B5B5;font-size:15px;line-height:1.5}
+.conf label{color:#B5B5B5}.conf input{background:#151515;border-color:#2A2A2A;color:#fff}
+.conf .err{color:#FF8A65;font-size:14px;min-height:20px;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="capa" id="capa" onclick="if(event.target===this)cerrar()"><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+<div id="toast" role="status"></div>
+<script>
+var CFG={u:localStorage.getItem('inmov_u')||'',k:localStorage.getItem('inmov_k')||''};
+var D=null,vista='hoy',fecha=new Date(),rpe=null,parcial=false,met='Transferencia';
+var DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function $(id){return document.getElementById(id)}
+function iso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function toast(t,ms){var e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(window._t);window._t=setTimeout(function(){e.style.display='none'},ms||2200)}
+function api(body){body.k=CFG.k;return fetch(CFG.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+  .then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.error);return j.data})}
+
+/* ---------- Configuración inicial ---------- */
+function pantallaConf(msg){
+  $('app').innerHTML='<div class="conf"><img src="logo-blanco.png" alt="INMOV"><p>Conecta la app con tu planilla. Esto se hace una sola vez.</p>'+
+  '<label for="cu">Enlace de la app web (termina en /exec)</label><input id="cu" autocapitalize="off" autocorrect="off" value="'+esc(CFG.u)+'">'+
+  '<label for="ck">Clave</label><input id="ck" autocapitalize="off" autocorrect="off" value="'+esc(CFG.k)+'">'+
+  '<div class="err" id="cerr">'+esc(msg||'')+'</div><button class="big" onclick="conectar()">Conectar</button></div>';
+}
+function conectar(){
+  CFG.u=$('cu').value.trim();CFG.k=$('ck').value.trim();
+  if(CFG.u.indexOf('https://script.google.com/')!==0||CFG.u.slice(-5)!=='/exec'){$('cerr').textContent='El enlace debe empezar con https://script.google.com/ y terminar en /exec';return}
+  $('cerr').textContent='Conectando…';
+  api({a:'ping'}).then(function(){localStorage.setItem('inmov_u',CFG.u);localStorage.setItem('inmov_k',CFG.k);iniciar()})
+  .catch(function(e){$('cerr').textContent=/Clave/.test(e.message)?'La clave no coincide. Cópiala de nuevo desde el registro de Apps Script.':'No se pudo conectar. Revisa el enlace y que la implementación tenga acceso "Cualquier persona".'})
+}
+
+/* ---------- App ---------- */
+function iniciar(){
+  $('app').innerHTML='<header><div class="top"><div class="logo"><img src="logo-blanco.png" alt="INMOV"></div><button class="ref" aria-label="Actualizar" onclick="cargar()">↻</button></div>'+
+  '<div class="dia" id="dia"><h1 id="titulo"></h1><div class="flechas"><button aria-label="Día anterior" onclick="mover(-1)">‹</button><button aria-label="Día siguiente" onclick="mover(1)">›</button></div></div>'+
+  '<div class="res" id="res"></div></header><main id="main"><div class="carga">Cargando…</div></main>'+
+  '<nav><button id="n-hoy" class="on" onclick="ver(\'hoy\')"><span class="ic">✓</span>Sesiones</button>'+
+  '<button id="n-pag" onclick="ver(\'pag\')"><span class="ic">$</span>Pagos</button>'+
+  '<button id="n-ale" onclick="ver(\'ale\')"><span class="ic">!</span>Alertas<span id="nb"></span></button></nav>';
+  pintaTitulo();cargar();
+}
+function pintaTitulo(){
+  var t=$('titulo');if(!t)return;
+  if(vista==='hoy'){var h=iso(new Date())===iso(fecha);
+    t.innerHTML='<small>'+(h?'Hoy':(iso(new Date(Date.now()-864e5))===iso(fecha)?'Ayer':fecha.getDate()+' de '+MESES[fecha.getMonth()]))+'</small>'+DIAS[fecha.getDay()]+' '+fecha.getDate();
+    document.querySelector('.flechas').style.display='flex'}
+  else{t.innerHTML='<small>'+(vista==='pag'?'Registrar':'Lo que necesita atención')+'</small>'+(vista==='pag'?'Pagos':'Alertas');document.querySelector('.flechas').style.display='none'}
+}
+function mover(n){fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
+function cargar(){
+  api({a:'datos',fecha:iso(fecha)}).then(function(d){D=d;pintar()}).catch(function(e){
+    if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
+    $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
+}
+function ver(v){vista=v;['hoy','pag','ale'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar()}
+function tag(t){if(!t)return'';var c=/Agotado|Vencido/.test(t)?'t-r':(t==='OK'||t==='Vigente')?'t-ok':'t-w';return '<span class="tag '+c+'">'+esc(t)+'</span>'}
+function num(x){return x!==''&&x!==null&&!isNaN(x)}
+function presenciales(){return D.clientes.filter(function(c){return c.estado==='Activo'&&!/Online/i.test(c.modalidad)})}
+function pintar(){
+  if(!D||!$('main'))return;
+  var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':'';
+  var h='';
+  if(vista==='hoy'){
+    var ps=presenciales(),hechos=ps.filter(function(c){return c.hoy}).length;
+    $('res').textContent=ps.length?hechos+' de '+ps.length+' registrados':'';
+    ps.forEach(function(c){
+      var q=num(c.restantes)?'<span class="q'+(c.restantes<=2?' poco':'')+'">Quedan '+c.restantes+'</span>':'Sin pago registrado';
+      h+='<div class="cli"><div class="nm">'+esc(c.nombre)+'</div><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+'</div>';
+      if(c.hoy){var ok=c.hoy.indexOf('Asistió')===0;h+='<div class="hecho'+(ok?'':' no')+'"><span>'+(ok?'✓ ':'')+esc(c.hoy)+'</span><button onclick="deshacer(\''+c.id+'\')">Deshacer</button></div>'}
+      else h+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>';
+      h+='</div>'});
+    if(!h)h='<div class="vacio"><strong>Sin clientes presenciales activos</strong></div>'}
+  if(vista==='pag'){$('res').textContent='Toca un cliente para registrar su pago';
+    D.pagadores.forEach(function(p){h+='<button class="pg" onclick="pago(\''+p.id+'\')"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+(num(p.restantes)?'Quedan '+p.restantes+' sesiones':'Plan online')+(p.vence?', referencia '+esc(p.vence):'')+'</div>'+tag(p.pago)+'</div><span class="mas">+</span></button>'})}
+  if(vista==='ale'){$('res').textContent=n?n+(n===1?' cliente':' clientes'):'';
+    if(!n)h='<div class="vacio"><strong>Todo al día</strong>No hay renovaciones, cierres ni ausencias pendientes.</div>';
+    else D.alertas.forEach(function(a){h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+(a.meso?'<div style="margin-top:10px"><a class="lnk" href="'+esc(a.meso)+'" target="_blank" rel="noopener">Abrir MESO</a></div>':'')+'</div>'});
+    h+='<div style="text-align:center;margin:22px 0 8px"><a class="lnk" href="'+esc(D.planilla)+'" target="_blank" rel="noopener">Abrir planilla completa</a></div>'}
+  $('main').innerHTML=h;
+}
+function cli(id){return D.clientes.filter(function(c){return c.id===id})[0]}
+function abrir(html){$('panel').innerHTML=html;$('capa').className='capa on'}
+function cerrar(){$('capa').className='capa'}
+function vino(id){rpe=null;parcial=false;var c=cli(id),b='';for(var i=1;i<=10;i++)b+='<button onclick="selR(this,'+i+')">'+i+'</button>';
+  abrir('<h3>'+esc(c.nombre)+'</h3><p>¿Qué tan dura fue la sesión? Opcional.</p><div class="rpe">'+b+'</div><label class="check"><input type="checkbox" onchange="parcial=this.checked"> Llegó tarde o se fue antes</label><button class="big" onclick="enviar(\''+id+'\',parcial?\'Asistió parcial\':\'Asistió\',rpe)">Guardar asistencia</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function selR(b,i){rpe=i;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
+function aviso(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' avisó</h3><p>¿Con cuánta anticipación?</p><button class="big" onclick="enviar(\''+id+'\',\'Canceló con aviso ≥8 h\')">Con 8 horas o más</button><button class="sec" onclick="enviar(\''+id+'\',\'Canceló con menos de 8 h\')">Con menos de 8 horas</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function falto(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' no vino</h3><p>No avisó. La sesión se descuenta de su plan.</p><button class="big" onclick="enviar(\''+id+'\',\'No asistió sin aviso\')">Registrar falta</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function enviar(id,estado,r){cerrar();var c=cli(id);c.hoy=estado;pintar();toast('Guardando…',8000);
+  api({a:'sesion',id:id,estado:estado,rpe:r,fecha:iso(fecha)}).then(function(){toast('Guardado');setTimeout(cargar,2500)})
+  .catch(function(e){c.hoy='';pintar();toast('No se guardó: '+e.message,4000)})}
+function deshacer(id){toast('Deshaciendo…',8000);api({a:'deshacer',id:id,fecha:iso(fecha)}).then(function(){cli(id).hoy='';pintar();toast('Deshecho');setTimeout(cargar,2500)})
+  .catch(function(e){toast(e.message,4000)})}
+function pago(pid){var p=D.pagadores.filter(function(x){return x.id===pid})[0];met='Transferencia';
+  var op=D.planes.map(function(pl){return '<option value="'+esc(pl.id)+'"'+(pl.id===p.plan?' selected':'')+'>'+esc(pl.nombre)+'</option>'}).join('');
+  var pr=(D.planes.filter(function(x){return x.id===p.plan})[0]||{}).precio;var hoy=iso(new Date());
+  abrir('<h3>Pago de '+esc(p.nombre)+'</h3><p>Revisa y confirma.</p><label for="pp">Plan</label><select id="pp" onchange="cambiaPlan()">'+op+'</select>'+
+  '<label for="pm">Monto</label><input id="pm" type="number" inputmode="numeric" value="'+(pr===''||pr==null?'':pr)+'">'+
+  '<label>Método</label><div class="opts"><button class="opt on" onclick="selM(this,\'Transferencia\')">Transferencia</button><button class="opt" onclick="selM(this,\'Efectivo\')">Efectivo</button><button class="opt" onclick="selM(this,\'Otro\')">Otro</button></div>'+
+  '<label for="pf">Fecha del pago</label><input id="pf" type="date" value="'+hoy+'">'+
+  '<label for="pi">Primera sesión de este plan</label><input id="pi" type="date" value="'+hoy+'">'+
+  '<button class="big" onclick="guardaPago(\''+pid+'\')">Registrar pago</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function cambiaPlan(){var id=$('pp').value,pl=D.planes.filter(function(x){return x.id===id})[0];$('pm').value=pl&&pl.precio!==''?pl.precio:''}
+function selM(b,m){met=m;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className='opt'});b.className='opt on'}
+function guardaPago(pid){var pl=$('pp').value,mo=$('pm').value,f=$('pf').value,i=$('pi').value;
+  if(!mo||!f||!i){toast('Completa el monto y las fechas');return}
+  cerrar();toast('Registrando pago…',8000);
+  api({a:'pago',pagador:pid,plan:pl,monto:mo,metodo:met,fechaPago:f,inicio:i}).then(function(){toast('Pago registrado');setTimeout(cargar,3000)})
+  .catch(function(e){toast('No se registró: '+e.message,4000)})}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')){fecha=new Date();pintaTitulo();cargar()}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if(CFG.u&&CFG.k)iniciar();else pantallaConf();
+</script>
+</body>
+</html>
