@@ -82,6 +82,23 @@ a.lnk{color:var(--o);font-weight:600;font-size:14px;text-decoration:none}
 .conf p{color:#B5B5B5;font-size:15px;line-height:1.5}
 .conf label{color:#B5B5B5}.conf input{background:#151515;border-color:#2A2A2A;color:#fff}
 .conf .err{color:#FF8A65;font-size:14px;min-height:20px;margin-top:10px}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--l);padding:4px;border-radius:14px;margin:6px 0 4px}
+.seg button{border:0;background:none;border-radius:11px;padding:11px 0;font-size:15px;font-weight:600;color:var(--g)}
+.seg button.on{background:#fff;color:var(--k);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+details.sec2{border-top:1px solid var(--b);padding:4px 0}
+details.sec2 summary{list-style:none;padding:14px 0;font-weight:600;font-size:16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+details.sec2 summary::-webkit-details-marker{display:none}
+details.sec2 summary::after{content:"+";color:var(--o);font-size:22px;font-weight:500}
+details.sec2[open] summary::after{content:"–"}
+details.sec2 .cnt{padding:0 0 14px}
+textarea{width:100%;font-family:inherit;font-size:16px;padding:12px;border:1px solid var(--b);border-radius:12px;min-height:64px;resize:vertical;color:var(--t)}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.calc{font-size:13px;color:var(--g);margin-top:6px}
+.calc b{color:var(--t)}
+.ok-box{background:var(--okb);color:var(--ok);border-radius:16px;padding:18px;margin-top:10px}
+.ok-box a{color:var(--ok);font-weight:600}
+.nota{font-size:13px;color:var(--g);margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -122,7 +139,8 @@ function iniciar(){
   '<div class="res" id="res"></div></header><main id="main"><div class="carga">Cargando…</div></main>'+
   '<nav><button id="n-hoy" class="on" onclick="ver(\'hoy\')"><span class="ic">✓</span>Sesiones</button>'+
   '<button id="n-pag" onclick="ver(\'pag\')"><span class="ic">$</span>Pagos</button>'+
-  '<button id="n-ale" onclick="ver(\'ale\')"><span class="ic">!</span>Alertas<span id="nb"></span></button></nav>';
+  '<button id="n-ale" onclick="ver(\'ale\')"><span class="ic">!</span>Alertas<span id="nb"></span></button>'+
+  '<button id="n-nue" onclick="ver(\'nue\')"><span class="ic">+</span>Nuevo</button></nav>';
   pintaTitulo();cargar();
 }
 function pintaTitulo(){
@@ -130,7 +148,7 @@ function pintaTitulo(){
   if(vista==='hoy'){var h=iso(new Date())===iso(fecha);
     t.innerHTML='<small>'+(h?'Hoy':(iso(new Date(Date.now()-864e5))===iso(fecha)?'Ayer':fecha.getDate()+' de '+MESES[fecha.getMonth()]))+'</small>'+DIAS[fecha.getDay()]+' '+fecha.getDate();
     document.querySelector('.flechas').style.display='flex'}
-  else{t.innerHTML='<small>'+(vista==='pag'?'Registrar':'Lo que necesita atención')+'</small>'+(vista==='pag'?'Pagos':'Alertas');document.querySelector('.flechas').style.display='none'}
+  else{var T={pag:['Registrar','Pagos'],ale:['Lo que necesita atención','Alertas'],nue:['Anamnesis','Nuevo cliente']}[vista];t.innerHTML='<small>'+T[0]+'</small>'+T[1];document.querySelector('.flechas').style.display='none'}
 }
 function mover(n){fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
 function cargar(){
@@ -138,7 +156,7 @@ function cargar(){
     if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
     $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
 }
-function ver(v){vista=v;['hoy','pag','ale'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar()}
+function ver(v){vista=v;['hoy','pag','ale','nue'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar()}
 function tag(t){if(!t)return'';var c=/Agotado|Vencido/.test(t)?'t-r':(t==='OK'||t==='Vigente')?'t-ok':'t-w';return '<span class="tag '+c+'">'+esc(t)+'</span>'}
 function num(x){return x!==''&&x!==null&&!isNaN(x)}
 function presenciales(){return D.clientes.filter(function(c){return c.estado==='Activo'&&!/Online/i.test(c.modalidad)})}
@@ -162,6 +180,7 @@ function pintar(){
     if(!n)h='<div class="vacio"><strong>Todo al día</strong>No hay renovaciones, cierres ni ausencias pendientes.</div>';
     else D.alertas.forEach(function(a){h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+(a.meso?'<div style="margin-top:10px"><a class="lnk" href="'+esc(a.meso)+'" target="_blank" rel="noopener">Abrir MESO</a></div>':'')+'</div>'});
     h+='<div style="text-align:center;margin:22px 0 8px"><a class="lnk" href="'+esc(D.planilla)+'" target="_blank" rel="noopener">Abrir planilla completa</a></div>'}
+  if(vista==='nue'){$('res').textContent='';$('main').innerHTML='';pintaNuevo();return}
   $('main').innerHTML=h;
 }
 function cli(id){return D.clientes.filter(function(c){return c.id===id})[0]}
@@ -193,7 +212,68 @@ function guardaPago(pid){var pl=$('pp').value,mo=$('pm').value,f=$('pf').value,i
   cerrar();toast('Registrando pago…',8000);
   api({a:'pago',pagador:pid,plan:pl,monto:mo,metodo:met,fechaPago:f,inicio:i}).then(function(){toast('Pago registrado');setTimeout(cargar,3000)})
   .catch(function(e){toast('No se registró: '+e.message,4000)})}
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')){fecha=new Date();pintaTitulo();cargar()}});
+
+/* ---------- Nuevo cliente (anamnesis) ---------- */
+var EV=[['Movilidad',[['sentadilla','Sentadilla (con y sin elevación)'],['estocada','Estocada reversa (con y sin vara)'],['bisagra','Bisagra de cadera (simular RDL con vara)'],['hombros','Movilidad de hombros (sentadilla isométrica en pared)'],['sentBrazos','Sentadilla con brazos a la altura de las orejas']]],
+ ['Fuerza y técnica',[['pressHombros','Press de hombros'],['banca','Press banca DB'],['squat','Back squat barra (o variante)'],['legExt','Leg extension'],['rdl','Romanian deadlift (RDL)'],['pushUp','Push up'],['jalon','Jalón polea agarre amplio']]],
+ ['Accesorios y aeróbicos',[['plancha','Plancha'],['pullUps','Pull ups'],['legCurl','Leg curl'],['milla','Test de milla'],['testSq','Test de sentadilla (30 en 45")']]]];
+var AN=[['estatura','Estatura (m)','1,75'],['peso','Peso (kg)','70,5'],['grasa','% grasa corporal',''],['musculo','% músculo esquelético',''],['mb','Metabolismo basal (kcal)',''],['edadc','Edad corporal',''],['visceral','Nivel de grasa visceral','']];
+var NV=null,OPC=null,per=0;
+function nvVacio(){return{tipo:'individual',fecha:iso(new Date()),modalidad:'Presencial',plan:'',horario:'',personas:[{},{}]}}
+function nvGuardar(){try{localStorage.setItem('inmov_nuevo',JSON.stringify(NV))}catch(e){}}
+function nvCargar(){try{NV=JSON.parse(localStorage.getItem('inmov_nuevo'))}catch(e){}if(!NV||!NV.personas)NV=nvVacio()}
+function campo(path,label,ph,tipo){var v=leer(path);var id='f_'+path.replace(/\./g,'_');
+  if(tipo==='area')return '<label for="'+id+'">'+label+'</label><textarea id="'+id+'" placeholder="'+esc(ph||'')+'" oninput="esc2(\''+path+'\',this.value)">'+esc(v)+'</textarea>';
+  return '<label for="'+id+'">'+label+'</label><input id="'+id+'" type="'+(tipo||'text')+'"'+(tipo==='decimal'?' inputmode="decimal"':'')+' placeholder="'+esc(ph||'')+'" value="'+esc(v)+'" oninput="esc2(\''+path+'\',this.value)">'}
+function leer(path){var o=NV;path.split('.').forEach(function(k){o=o==null?'':o[k]});return o==null?'':o}
+function esc2(path,v){var ks=path.split('.'),o=NV;for(var i=0;i<ks.length-1;i++){if(o[ks[i]]==null)o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=v;nvGuardar();if(/antro\.(peso|estatura)|nac/.test(path))calcs()}
+function edadDe(n){if(!n)return'';var h=new Date(),d=new Date(n+'T12:00:00'),e=h.getFullYear()-d.getFullYear();if(h.getMonth()<d.getMonth()||(h.getMonth()===d.getMonth()&&h.getDate()<d.getDate()))e--;return e}
+function calcs(){var p=NV.personas[per]||{},a=p.antro||{},e=$('calc_edad'),i=$('calc_imc');
+  if(e)e.innerHTML=p.nac?'Edad: <b>'+edadDe(p.nac)+' años</b>':'';
+  var est=parseFloat(String(a.estatura||'').replace(',','.')),pe=parseFloat(String(a.peso||'').replace(',','.'));if(est>3)est=est/100;
+  if(i)i.innerHTML=(est>0&&pe>0)?'IMC: <b>'+(Math.round(pe/(est*est)*10)/10).toString().replace('.',',')+'</b>':''}
+function pintaNuevo(){
+  if(!NV)nvCargar();
+  if(!OPC){$('main').innerHTML='<div class="carga">Cargando…</div>';api({a:'opciones'}).then(function(o){OPC=o;pintaNuevo()}).catch(function(e){$('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'</div>'});return}
+  var duo=NV.tipo==='duo';if(!duo)per=0;var b='p'+per,P='personas.'+per;
+  var h='<div class="seg"><button class="'+(!duo?'on':'')+'" onclick="NV.tipo=\'individual\';nvGuardar();pintaNuevo()">Individual</button><button class="'+(duo?'on':'')+'" onclick="NV.tipo=\'duo\';nvGuardar();pintaNuevo()">Dúo</button></div>';
+  h+='<details class="sec2" open><summary>Plan</summary><div class="cnt">'+
+   '<label>Modalidad</label><div class="opts" style="grid-template-columns:1fr 1fr"><button class="opt'+(NV.modalidad!=='Online'?' on':'')+'" onclick="NV.modalidad=\'Presencial\';nvGuardar();pintaNuevo()">Presencial</button><button class="opt'+(NV.modalidad==='Online'?' on':'')+'" onclick="NV.modalidad=\'Online\';nvGuardar();pintaNuevo()">Online</button></div>'+
+   '<label for="f_plan">Plan</label><select id="f_plan" onchange="esc2(\'plan\',this.value)"><option value="">Elegir…</option>'+(D?D.planes:[]).map(function(p){return '<option value="'+esc(p.id)+'"'+(NV.plan===p.id?' selected':'')+'>'+esc(p.nombre)+'</option>'}).join('')+'</select>'+
+   campo('horario','Días y horarios','Lu-Mi-Vi 11:00')+campo('fecha','Fecha de la evaluación','','date')+'</div></details>';
+  if(duo)h+='<div class="seg" style="margin-top:14px"><button class="'+(per===0?'on':'')+'" onclick="per=0;pintaNuevo()">'+esc(leer('personas.0.nombre')||'Persona 1')+'</button><button class="'+(per===1?'on':'')+'" onclick="per=1;pintaNuevo()">'+esc(leer('personas.1.nombre')||'Persona 2')+'</button></div>';
+  var sx=leer(P+'.sexo');
+  h+='<details class="sec2" open><summary>Datos personales</summary><div class="cnt"><div class="dos"><div>'+campo(P+'.nombre','Nombre')+'</div><div>'+campo(P+'.apellido','Apellido')+'</div></div>'+
+   campo(P+'.nac','Fecha de nacimiento','','date')+'<div class="calc" id="calc_edad"></div>'+
+   '<label>Sexo</label><div class="opts">'+['F','M','Otro'].map(function(x){return '<button class="opt'+(sx===x?' on':'')+'" onclick="esc2(\''+P+'.sexo\',\''+x+'\');pintaNuevo()">'+x+'</button>'}).join('')+'</div>'+
+   '<div class="dos"><div>'+campo(P+'.telefono','Teléfono','+569…','tel')+'</div><div>'+campo(P+'.email','Correo','','email')+'</div></div></div></details>';
+  var ob=leer(P+'.objetivo');
+  h+='<details class="sec2"><summary>Objetivos e historial</summary><div class="cnt"><label for="f_obj">Objetivo principal</label><select id="f_obj" onchange="esc2(\''+P+'.objetivo\',this.value)"><option value="">Elegir…</option>'+OPC.objetivos.map(function(o){return '<option'+(ob===o?' selected':'')+'>'+esc(o)+'</option>'}).join('')+'</select>'+
+   campo(P+'.objetivosTxt','Objetivos (en sus palabras)','','area')+campo(P+'.historial','Historial deportivo / entrenamiento','','area')+'</div></details>';
+  h+='<details class="sec2"><summary>Salud</summary><div class="cnt">'+campo(P+'.lesiones','Lesiones','','area')+campo(P+'.enfermedades','Enfermedades metabólicas','','area')+campo(P+'.notas','Medicamentos y otras notas','','area')+'<p class="nota">Las lesiones y enfermedades quedan también en 08_SALUD.</p></div></details>';
+  EV.forEach(function(g){h+='<details class="sec2"><summary>'+g[0]+'</summary><div class="cnt">'+g[1].map(function(c){return campo(P+'.eval.'+c[0],c[1],'Observaciones, cargas, reps…')}).join('')+'</div></details>'});
+  h+='<details class="sec2"><summary>Composición corporal</summary><div class="cnt"><div class="dos">'+AN.map(function(c){return '<div>'+campo(P+'.antro.'+c[0],c[1],c[2],'decimal')+'</div>'}).join('')+'</div><div class="calc" id="calc_imc"></div></div></details>';
+  h+='<button class="big" style="margin-top:18px" onclick="crearNuevo()">Crear '+(duo?'dúo':'cliente')+'</button><button class="sec" onclick="if(confirm(\'¿Borrar todo lo escrito?\')){NV=nvVacio();nvGuardar();per=0;pintaNuevo()}">Empezar de nuevo</button>'+
+   '<p class="nota">Lo que escribes se guarda en el teléfono mientras completas la ficha.</p>';
+  $('main').innerHTML=h;calcs();
+}
+function crearNuevo(){
+  var duo=NV.tipo==='duo',ps=duo?NV.personas.slice(0,2):[NV.personas[0]];
+  for(var i=0;i<ps.length;i++){if(!ps[i]||!ps[i].nombre||!ps[i].apellido){toast('Falta nombre y apellido'+(duo?' de '+(i?'la persona 2':'la persona 1'):''),3000);return}}
+  if(!NV.plan){toast('Elige el plan',3000);return}
+  var nom=ps.map(function(p){return p.nombre+' '+p.apellido}).join(' y ');
+  if(!confirm('Crear '+(duo?'el dúo ':'a ')+nom+'?\nSe creará su carpeta en Drive con la información y los datos antropométricos.'))return;
+  $('main').innerHTML='<div class="carga">Creando carpeta y archivos…<br>Puede tardar unos 30 segundos.</div>';
+  var datos=JSON.parse(JSON.stringify(NV));datos.personas=ps;
+  api({a:'nuevo',datos:datos}).then(function(r){
+    NV=nvVacio();nvGuardar();per=0;
+    $('main').innerHTML='<div class="ok-box"><strong>'+esc(r.nombre)+' quedó creado</strong><br>'+r.ids.join(', ')+(r.grupo?' · '+r.grupo:'')+'<br><br><a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Abrir carpeta en Drive</a></div>'+
+     '<p class="nota">Ya aparece en Sesiones y Pagos. Falta registrar su primer pago y crear su MESO.</p><button class="sec" onclick="pintaNuevo()">Nueva anamnesis</button>';
+    cargarSilencioso()})
+  .catch(function(e){toast('No se creó: '+e.message,5000);pintaNuevo()})}
+function cargarSilencioso(){api({a:'datos',fecha:iso(fecha)}).then(function(d){D=d;var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
+
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'){fecha=new Date();pintaTitulo();cargar()}});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
 if(CFG.u&&CFG.k)iniciar();else pantallaConf();
 </script>
