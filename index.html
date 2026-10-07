@@ -235,7 +235,7 @@ function pintar(){
       if(/plazo/.test(a.texto))b+='<button class="pri" onclick="extender(\''+a.pagador+'\',7)">Extender 1 semana</button><button onclick="extender(\''+a.pagador+'\',14)">2 semanas</button>';
       if(/Agotado|Por agotar|Vencido|Por vencer|Sin registro/.test(a.texto))b+='<button'+(b?'':' class="pri"')+' onclick="pago(\''+a.pagador+'\')">Registrar pago</button>';
       if(/Bloque/.test(a.texto))b+='<button onclick="nuevoMeso(\''+a.id+'\')">Nuevo MESO</button>';
-      if(/Agotado|Por agotar|Vencido|Por vencer/.test(a.texto)&&(cli(a.id)||{}).tel)b+='<button class="wa" onclick="wsp(\''+a.id+'\')">Avisar por WhatsApp</button>';
+      if(/Agotado|Por agotar|Vencido|Por vencer/.test(a.texto)&&((cli(a.id)||{}).tel||(cli(a.id)||{}).grupo))b+='<button class="wa" onclick="wsp(\''+a.id+'\')">Avisar por WhatsApp</button>';
       b+='<button onclick="ficha(\''+a.id+'\')">Ver ficha</button>';
       h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+'<div class="acts">'+b+'</div></div>'});
     var pausa=D.clientes.filter(function(c){return c.estado==='Pausa'});
@@ -282,12 +282,18 @@ function guardaMover(id){var f=$('mvf').value,h=$('mvh').value;if(!f){toast('Eli
 function quitarMover(id){toast('Deshaciendo…',8000);api({a:'quitarMover',id:id,fecha:iso(fecha)}).then(function(){var c=cli(id);c.movidaA='';pintar();toast('Deshecho');setTimeout(cargar,1500)})
   .catch(function(e){toast(e.message,4000)})}
 /* ---------- WhatsApp ---------- */
-function wsp(id){var c=cli(id);if(!c||!c.tel){toast('Ese cliente no tiene teléfono registrado',3000);return}
-  var t=String(c.tel).replace(/\D/g,'');if(t.length===9&&t.charAt(0)==='9')t='56'+t;if(t.length===8)t='569'+t;
-  var n=c.nombre.split(' ')[0],m='';
-  if(num(c.restantes)&&c.restantes<=2){
-    m=c.restantes>0?'Hola '+n+'! 👋 Te cuento que te queda'+(c.restantes===1?' 1 sesión':'n '+c.restantes+' sesiones')+' de tu plan. Para seguir sin pausas puedes renovar cuando quieras. Cualquier duda me avisas 💪'
-      :'Hola '+n+'! 👋 Te cuento que ya completaste las sesiones de tu plan. Para seguir entrenando puedes renovar cuando quieras. Cualquier duda me avisas 💪'}
+function wsp(id){var c=cli(id);if(!c){return}
+  var duo=c.grupo?D.clientes.filter(function(x){return x.grupo===c.grupo&&x.estado==='Activo'}):[];duo=duo.length>1?duo:null;
+  if(!duo&&!c.tel){toast('Ese cliente no tiene teléfono registrado',3000);return}
+  var t=String(c.tel||'').replace(/\D/g,'');if(t.length===9&&t.charAt(0)==='9')t='56'+t;if(t.length===8)t='569'+t;
+  var n=duo?duo.map(function(x){return x.nombre.split(' ')[0]}).join(' y '):c.nombre.split(' ')[0],m='',r=c.restantes;
+  if(num(r)&&r<=2){
+    var q=r>0?(r===1?'queda 1 sesión':'quedan '+r+' sesiones'):'';
+    if(duo)m='Hola '+n+'! 👋 Les informo que '+(r>0?q+' de su plan, para seguir sin pausas pueden renovar cuando quieran.':'ya completaron las sesiones de su plan, para seguir entrenando pueden renovar cuando quieran.')+' Cualquier duda me avisan 💪';
+    else m='Hola '+n+'! 👋 Te informo que '+(r>0?q+' de tu plan, para seguir sin pausas puedes renovar cuando quieras.':'ya completaste las sesiones de tu plan, para seguir entrenando puedes renovar cuando quieras.')+' Cualquier duda me avisas 💪'}
+  /* Dúo: WhatsApp no permite abrir un grupo directo, así que se abre la lista de chats para elegir el grupo */
+  if(duo&&m){location.href='https://wa.me/?text='+encodeURIComponent(m);return}
+  if(!t){toast('Ese cliente no tiene teléfono registrado',3000);return}
   location.href='https://wa.me/'+t+(m?'?text='+encodeURIComponent(m):'')}
 /* ---------- Semana ---------- */
 var semRef=new Date(),SEM=null,nSem=0,mesRef=new Date(),MES=null,nMes=0;
@@ -420,7 +426,7 @@ function ficha(id){var c=cli(id);if(!c)return;
   h+='<div class="acts" style="margin-top:14px">';
   if(c.meso)h+='<button onclick="window.open(\''+esc(c.meso)+'\',\'_blank\')">Abrir MESO</button>';
   if(c.carpeta)h+='<button onclick="window.open(\''+esc(c.carpeta)+'\',\'_blank\')">Abrir carpeta</button>';
-  if(c.tel)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2?'Avisar renovación':'WhatsApp')+'</button>';
+  if(c.tel||c.grupo)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2?(c.grupo?'Avisar renovación al grupo':'Avisar renovación'):'WhatsApp')+'</button>';
   h+='</div><div class="acts">';
   if(c.estado==='Activo'){h+='<button class="pri" onclick="nuevoMeso(\''+id+'\')">Nuevo MESO</button><button onclick="pago(\''+c.pagador+'\')">Registrar pago</button><button onclick="extender(\''+c.pagador+'\',7)">Extender plazo 1 sem</button>'}
   h+='</div><div class="acts">';
