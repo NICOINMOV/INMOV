@@ -44,6 +44,19 @@ main{padding:6px 18px 10px}
 .acc button{border:0;border-radius:14px;padding:14px 4px;font-size:15px;font-weight:600}
 .vino{background:var(--o);color:#fff}.avi{background:var(--l);color:var(--t)}.fal{background:var(--l);color:var(--r)}
 .hecho{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:11px 14px;border-radius:14px;background:var(--okb);color:var(--ok);font-weight:600;font-size:15px}
+.wa{background:#25D366!important;color:#fff!important}
+.kpi{background:var(--k);color:#fff;border-radius:18px;padding:18px;margin:14px 0 10px}
+.kpi small{display:block;color:#B5B5B5;font-size:13px}.kpi b{display:block;font-size:30px;line-height:1.2;margin-top:2px}.kpi span{font-size:13px;color:#B5B5B5}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--l);border-radius:16px;padding:14px}.tile b{display:block;font-size:24px}.tile span{font-size:13px;color:var(--g)}
+.fl{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--b);font-size:15px}
+.fl:last-child{border-bottom:0}.fl span:last-child{color:var(--g);text-align:right;white-space:nowrap}.fl b{font-weight:600}
+.sd{display:flex;justify-content:space-between;align-items:baseline;width:100%;background:none;border:0;padding:0;margin:22px 0 4px;text-align:left;color:var(--t);font-size:17px;font-weight:700}
+.sd small{font-size:13px;font-weight:500;color:var(--g)}.sd.hoy{color:var(--o)}
+.sf{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--b);font-size:15px}
+.sf:last-child{border-bottom:0}.sf .hora{margin:0;vertical-align:0}.sf .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sf .e{font-size:12px;font-weight:600;white-space:nowrap}.sf .e.ok{color:var(--ok)}.sf .e.no{color:var(--w)}.sf .e.mv{color:var(--g)}
+.snada{color:var(--g);font-size:14px;padding:6px 0}
 .hecho.mov{background:var(--l);color:var(--t)}
 .lnk{display:block;margin:10px auto 0;background:none;border:0;color:var(--g);font-size:13px;font-weight:500;text-decoration:underline;padding:4px 8px}
 .hecho.no{background:var(--wb);color:var(--w)}
@@ -168,9 +181,17 @@ function pintaTitulo(){
   if(vista==='hoy'){var h=iso(new Date())===iso(fecha);
     t.innerHTML='<small>'+(h?'Hoy':(iso(new Date(Date.now()-864e5))===iso(fecha)?'Ayer':fecha.getDate()+' de '+MESES[fecha.getMonth()]))+'</small>'+DIAS[fecha.getDay()]+' '+fecha.getDate();
     document.querySelector('.flechas').style.display='flex'}
+  else if(vista==='sem'){var l=lunesDe(semRef),d=new Date(l.getTime());d.setDate(d.getDate()+6);
+    t.innerHTML='<small>Semana</small>'+l.getDate()+(l.getMonth()!==d.getMonth()?' '+MESES[l.getMonth()].slice(0,3):'')+' al '+d.getDate()+' '+MESES[d.getMonth()].slice(0,3);
+    document.querySelector('.flechas').style.display='flex'}
+  else if(vista==='mes'){t.innerHTML='<small>Resumen del mes</small>'+MESES[mesRef.getMonth()].charAt(0).toUpperCase()+MESES[mesRef.getMonth()].slice(1)+' '+mesRef.getFullYear();
+    document.querySelector('.flechas').style.display='flex'}
   else{var T={pag:['Registrar','Pagos'],ale:['Lo que necesita atención','Alertas'],nue:['Anamnesis','Nuevo cliente']}[vista];t.innerHTML='<small>'+T[0]+'</small>'+T[1];document.querySelector('.flechas').style.display='none'}
 }
-function mover(n){fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
+function mover(n){
+  if(vista==='sem'){semRef.setDate(semRef.getDate()+7*n);pintaTitulo();cargarSem();return}
+  if(vista==='mes'){mesRef=new Date(mesRef.getFullYear(),mesRef.getMonth()+n,1);pintaTitulo();cargarMes();return}
+  fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
 var nCarga=0;
 function cargar(){
   var n=++nCarga; /* si cambias de día rápido, solo vale la última respuesta */
@@ -179,7 +200,7 @@ function cargar(){
     if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
     $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
 }
-function ver(v){vista=v;['hoy','pag','ale','nue'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar()}
+function ver(v){vista=v;['hoy','pag','ale','nue'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar();if(v==='sem')cargarSem();if(v==='mes')cargarMes()}
 function tag(t){if(!t)return'';var c=/Agotado|Vencido/.test(t)?'t-r':(t==='OK'||t==='Vigente')?'t-ok':'t-w';return '<span class="tag '+c+'">'+esc(t)+'</span>'}
 function num(x){return x!==''&&x!==null&&!isNaN(x)}
 function presenciales(){return D.clientes.filter(function(c){return c.estado==='Activo'&&!/Online/i.test(c.modalidad)})}
@@ -203,7 +224,9 @@ function pintar(){
     if(toca.length){h+='<div class="grp">Les toca hoy</div>';toca.forEach(function(c){h+=fila(c)})}
     if(otros.length){h+='<div class="grp">'+(toca.length?'Otros clientes':'Clientes')+'</div>';otros.forEach(function(c){h+=fila(c)})}
     if(!ps.length)h='<div class="vacio"><strong>Sin clientes presenciales activos</strong></div>'}
-  if(vista==='pag'){$('res').textContent='Toca un cliente para registrar su pago';
+  if(vista==='sem'){pintaSem();return}
+  if(vista==='mes'){pintaMes();return}
+  if(vista==='pag'){$('res').textContent='Toca un cliente para registrar su pago';h+='<div class="acts" style="margin:14px 0 4px"><button onclick="ver(\'mes\')">Ver resumen del mes</button></div>';
     D.pagadores.forEach(function(p){h+='<button class="pg" onclick="pago(\''+p.id+'\')"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+(num(p.restantes)?'Quedan '+p.restantes+' sesiones':'Plan online')+(p.vence?', referencia '+esc(p.vence):'')+'</div>'+tag(p.pago)+'</div><span class="mas">+</span></button>'})}
   if(vista==='ale'){$('res').textContent=n?n+(n===1?' cliente':' clientes'):'';
     if(!n)h='<div class="vacio"><strong>Todo al día</strong>No hay renovaciones, cierres ni ausencias pendientes.</div>';
@@ -212,6 +235,7 @@ function pintar(){
       if(/plazo/.test(a.texto))b+='<button class="pri" onclick="extender(\''+a.pagador+'\',7)">Extender 1 semana</button><button onclick="extender(\''+a.pagador+'\',14)">2 semanas</button>';
       if(/Agotado|Por agotar|Vencido|Por vencer|Sin registro/.test(a.texto))b+='<button'+(b?'':' class="pri"')+' onclick="pago(\''+a.pagador+'\')">Registrar pago</button>';
       if(/Bloque/.test(a.texto))b+='<button onclick="nuevoMeso(\''+a.id+'\')">Nuevo MESO</button>';
+      if(/Agotado|Por agotar|Vencido|Por vencer/.test(a.texto)&&(cli(a.id)||{}).tel)b+='<button class="wa" onclick="wsp(\''+a.id+'\')">Avisar por WhatsApp</button>';
       b+='<button onclick="ficha(\''+a.id+'\')">Ver ficha</button>';
       h+='<div class="cli"><div class="nm">'+esc(a.nombre)+'</div>'+a.texto.split(' · ').map(tag).join('')+'<div class="acts">'+b+'</div></div>'});
     var pausa=D.clientes.filter(function(c){return c.estado==='Pausa'});
@@ -227,18 +251,25 @@ function sesTxt(c){if(!num(c.periodo))return '';var u=Number(c.usadas)||0,t=c.pe
 function cli(id){return D.clientes.filter(function(c){return c.id===id})[0]}
 function abrir(html){$('panel').innerHTML=html;$('capa').className='capa on'}
 function cerrar(){$('capa').className='capa'}
-var pmin=0,ptipo='tarde';
-function vino(id){rpe=null;parcial=false;pmin=0;ptipo='tarde';var c=cli(id),b='',m='';for(var i=1;i<=10;i++)b+='<button onclick="selR(this,'+i+')">'+i+'</button>';
+var pmin=0,ptipo='tarde',dolor=false,dint=0;
+function vino(id){rpe=null;parcial=false;pmin=0;ptipo='tarde';dolor=false;dint=0;var c=cli(id),b='',m='',di='';for(var i=1;i<=10;i++){b+='<button onclick="selR(this,'+i+')">'+i+'</button>';di+='<button onclick="selD(this,'+i+')">'+i+'</button>'}
   [5,10,15,20,25,30,40,45].forEach(function(x){m+='<button onclick="selMin(this,'+x+')">'+x+'</button>'});
+  var zs=(D.zonas||[]).map(function(z){return '<option>'+esc(z)+'</option>'}).join('');
   abrir('<h3>'+esc(c.nombre)+'</h3><p>¿Qué tan dura fue la sesión? Opcional.</p><div class="rpe">'+b+'</div><label class="check"><input type="checkbox" onchange="parcial=this.checked;$(\'pbox\').style.display=parcial?\'block\':\'none\'"> Llegó tarde o se fue antes</label>'+
   '<div id="pbox" style="display:none"><div class="seg"><button class="on" onclick="selT(this,\'tarde\')">Llegó tarde</button><button onclick="selT(this,\'antes\')">Se fue antes</button></div><p style="margin:10px 0 0">¿Cuántos minutos?</p><div class="rpe mins" id="pmins" style="grid-template-columns:repeat(4,1fr)">'+m+'</div><input id="potro" type="number" inputmode="numeric" min="1" max="59" placeholder="Otro (minutos)" oninput="otroM(this)" style="margin-bottom:14px"></div>'+
+  (zs?'<label class="check"><input type="checkbox" onchange="dolor=this.checked;$(\'dbox\').style.display=dolor?\'block\':\'none\'"> Tuvo molestia o dolor</label>'+
+  '<div id="dbox" style="display:none"><div class="dos"><div><label style="margin-top:0">Zona</label><select id="dzona"><option value="">Elegir…</option>'+zs+'</select></div><div><label style="margin-top:0">Lado</label><select id="dlado"><option>No aplica</option><option>Izquierdo</option><option>Derecho</option><option>Bilateral</option></select></div></div><p style="margin:12px 0 0">Intensidad (1 leve · 10 máxima)</p><div class="rpe">'+di+'</div><label class="check"><input id="dmod" type="checkbox"> Tuve que modificar la sesión</label></div>':'')+
+  '<label style="margin-top:4px">Nota de la sesión (opcional)</label><input id="vnota" type="text" maxlength="300" placeholder="Ej: subió carga en sentadilla" style="margin-bottom:14px">'+
   '<button class="big" onclick="guardaVino(\''+id+'\')">Guardar asistencia</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function selD(b,i){dint=i;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
 function selT(b,t){ptipo=t;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
 function selMin(b,x){pmin=x;$('potro').value='';Array.prototype.forEach.call(b.parentNode.children,function(y){y.className=''});b.className='on'}
 function otroM(i){pmin=Math.round(Number(i.value)||0);Array.prototype.forEach.call($('pmins').children,function(y){y.className=''})}
-function guardaVino(id){if(!parcial){enviar(id,'Asistió',rpe);return}
-  if(!(pmin>=1&&pmin<=59)){toast('Elige cuántos minutos (1 a 59)',3000);return}
-  enviar(id,'Asistió parcial',rpe,{min:pmin,tipo:ptipo})}
+function guardaVino(id){var ex={nota:($('vnota').value||'').trim()};
+  if(parcial){if(!(pmin>=1&&pmin<=59)){toast('Elige cuántos minutos (1 a 59)',3000);return}ex.min=pmin;ex.tipo=ptipo}
+  if(dolor){var z=$('dzona').value;if(!z){toast('Elige la zona de la molestia',3000);return}if(!dint){toast('Elige la intensidad',3000);return}
+    ex.dolor={zona:z,lado:$('dlado').value,intensidad:dint,modifico:$('dmod').checked}}
+  enviar(id,parcial?'Asistió parcial':'Asistió',rpe,ex)}
 var DS=['dom','lun','mar','mié','jue','vie','sáb'];
 function fcorta(s){var p=String(s).split('-');if(p.length<3)return esc(s);var d=new Date(+p[0],+p[1]-1,+p[2]);return DS[d.getDay()]+' '+p[2]+'/'+p[1]}
 function cambiarDia(id){var c=cli(id);
@@ -250,14 +281,55 @@ function guardaMover(id){var f=$('mvf').value,h=$('mvh').value;if(!f){toast('Eli
   .catch(function(e){c.movidaA='';pintar();toast('No se guardó: '+e.message,4000)})}
 function quitarMover(id){toast('Deshaciendo…',8000);api({a:'quitarMover',id:id,fecha:iso(fecha)}).then(function(){var c=cli(id);c.movidaA='';pintar();toast('Deshecho');setTimeout(cargar,1500)})
   .catch(function(e){toast(e.message,4000)})}
+/* ---------- WhatsApp ---------- */
+function wsp(id){var c=cli(id);if(!c||!c.tel){toast('Ese cliente no tiene teléfono registrado',3000);return}
+  var t=String(c.tel).replace(/\D/g,'');if(t.length===9&&t.charAt(0)==='9')t='56'+t;if(t.length===8)t='569'+t;
+  var n=c.nombre.split(' ')[0],m='';
+  if(num(c.restantes)&&c.restantes<=2){
+    m=c.restantes>0?'Hola '+n+'! 👋 Te cuento que te queda'+(c.restantes===1?' 1 sesión':'n '+c.restantes+' sesiones')+' de tu plan. Para seguir sin pausas puedes renovar cuando quieras. Cualquier duda me avisas 💪'
+      :'Hola '+n+'! 👋 Te cuento que ya completaste las sesiones de tu plan. Para seguir entrenando puedes renovar cuando quieras. Cualquier duda me avisas 💪'}
+  location.href='https://wa.me/'+t+(m?'?text='+encodeURIComponent(m):'')}
+/* ---------- Semana ---------- */
+var semRef=new Date(),SEM=null,nSem=0,mesRef=new Date(),MES=null,nMes=0;
+function lunesDe(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function cargarSem(){var n=++nSem;SEM=null;pintaSem();api({a:'semana',fecha:iso(semRef)}).then(function(d){if(n!==nSem)return;SEM=d;if(vista==='sem')pintaSem()}).catch(function(e){if(n!==nSem||vista!=='sem')return;
+  $('main').innerHTML='<div class="vacio"><strong>No se pudo cargar</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargarSem()">Reintentar</button></div>'})}
+function irDia(f){var p=f.split('-');fecha=new Date(+p[0],+p[1]-1,+p[2]);ver('hoy');$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
+function pintaSem(){if(!SEM){$('res').textContent='';$('main').innerHTML='<div class="carga">Cargando…</div>';return}
+  var h='',tot=0,hoyS=iso(new Date());
+  SEM.dias.forEach(function(d){var p=d.fecha.split('-'),dt=new Date(+p[0],+p[1]-1,+p[2]);
+    if(dt.getDay()===0&&!d.items.length&&!d.libre)return;
+    tot+=d.libre?0:d.items.length;
+    h+='<button class="sd'+(d.fecha===hoyS?' hoy':'')+'" onclick="irDia(\''+d.fecha+'\')"><span>'+DIAS[dt.getDay()]+' '+dt.getDate()+(d.fecha===hoyS?' · hoy':'')+'</span><small>'+(d.libre?'Sin clases':d.items.length?d.items.length+(d.items.length===1?' sesión':' sesiones'):'')+' ›</small></button>';
+    if(d.libre)h+='<div class="snada">Sin clases · '+esc(d.libre)+'</div>';
+    else if(!d.items.length)h+='<div class="snada">Nadie agendado</div>';
+    else d.items.forEach(function(i){var e='',k='';
+      if(i.estado){var ok=i.estado.indexOf('Asistió')===0;k=ok?'ok':'no';e=ok?'✓ Vino':/≥8/.test(i.estado)?'Avisó':/menos/.test(i.estado)?'Avisó tarde':'Faltó'}
+      else if(i.vieneDe){k='mv';e='↪ del '+fcorta(i.vieneDe)}
+      h+='<div class="sf">'+(i.hora?'<span class="hora">'+esc(i.hora)+'</span>':'')+'<span class="n">'+esc(i.nombre)+'</span>'+(e?'<span class="e '+k+'">'+e+'</span>':'')+'</div>'})});
+  $('res').textContent=tot+(tot===1?' sesión':' sesiones')+' en la semana';$('main').innerHTML=h||'<div class="vacio"><strong>Semana sin sesiones</strong></div>'}
+/* ---------- Resumen del mes ---------- */
+function clp(n){return '$'+String(Math.round(n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+function cargarMes(){var n=++nMes;MES=null;pintaMes();var k=mesRef.getFullYear()+'-'+('0'+(mesRef.getMonth()+1)).slice(-2);
+  api({a:'resumen',mes:k}).then(function(d){if(n!==nMes)return;MES=d;if(vista==='mes')pintaMes()}).catch(function(e){if(n!==nMes||vista!=='mes')return;
+  $('main').innerHTML='<div class="vacio"><strong>No se pudo cargar</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargarMes()">Reintentar</button></div>'})}
+function pintaMes(){if(!MES){$('res').textContent='';$('main').innerHTML='<div class="carga">Cargando…</div>';return}
+  var t=MES.total,h='<div class="kpi"><small>Ingresos registrados</small><b>'+clp(MES.ingresos)+'</b><span>'+MES.pagos.length+(MES.pagos.length===1?' pago':' pagos')+'</span></div>';
+  h+='<div class="tiles"><div class="tile"><b>'+t.asistio+'</b><span>Sesiones hechas</span></div><div class="tile"><b>'+t.aviso+'</b><span>Avisos a tiempo</span></div><div class="tile"><b>'+t.tarde+'</b><span>Avisos con menos de 8 h</span></div><div class="tile"><b>'+t.falta+'</b><span>Faltas sin aviso</span></div></div>';
+  if(t.parcial||t.molestias)h+='<div class="snada" style="padding-top:12px">'+[t.parcial?t.parcial+' con atraso o salida anticipada':'',t.molestias?t.molestias+' con molestia o dolor':''].filter(String).join(' · ')+'</div>';
+  if(MES.clientes.length){h+='<div class="grp">Por cliente</div>';MES.clientes.forEach(function(c){var x=[c.asistio+' ✓'];if(c.aviso)x.push(c.aviso+(c.aviso===1?' aviso':' avisos'));if(c.tarde)x.push(c.tarde+' tarde');if(c.falta)x.push(c.falta+(c.falta===1?' falta':' faltas'));
+    h+='<div class="fl"><b>'+esc(c.nombre)+'</b><span>'+x.join(' · ')+'</span></div>'})}
+  if(MES.pagos.length){h+='<div class="grp">Pagos</div>';MES.pagos.forEach(function(p){h+='<div class="fl"><span><b>'+esc(p.nombre)+'</b><br><small style="color:var(--g)">'+esc(p.fecha)+(p.plan?' · '+esc(p.plan):'')+'</small></span><span>'+clp(p.monto)+'</span></div>'})}
+  if(!MES.clientes.length&&!MES.pagos.length)h+='<div class="vacio"><strong>Sin registros este mes</strong></div>';
+  $('res').textContent='Solo cuenta lo registrado en el sistema';$('main').innerHTML=h}
 function selR(b,i){rpe=i;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
 function aviso(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' avisó</h3><p>¿Con cuánta anticipación?</p><button class="big" onclick="enviar(\''+id+'\',\'Canceló con aviso ≥8 h\')">Con 8 horas o más</button><button class="sec" onclick="enviar(\''+id+'\',\'Canceló con menos de 8 h\')">Con menos de 8 horas</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
 function falto(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' no vino</h3><p>No avisó. La sesión se descuenta de su plan.</p><button class="big" onclick="enviar(\''+id+'\',\'No asistió sin aviso\')">Registrar falta</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
 function memos(){try{return JSON.parse(localStorage.getItem('inmov_min')||'{}')}catch(e){return {}}}
 function memoSet(id,t){try{var m=memos(),k=id+'|'+iso(fecha);if(t)m[k]=t;else delete m[k];localStorage.setItem('inmov_min',JSON.stringify(m))}catch(e){}}
 function memo(c){if(c.hoy!=='Asistió parcial')return '';var t=memos()[c.id+'|'+iso(fecha)];return t?' · '+t:''}
-function enviar(id,estado,r,ex){cerrar();var c=cli(id);c.hoy=estado;memoSet(id,ex?ex.min+' min '+(ex.tipo==='tarde'?'tarde':'antes'):'');pintar();toast('Guardando…',8000);
-  api({a:'sesion',id:id,estado:estado+(ex?'|'+ex.tipo+'|'+ex.min:''),rpe:r,fecha:iso(fecha)}).then(function(){toast('Guardado');setTimeout(cargar,2500)})
+function enviar(id,estado,r,ex){cerrar();var c=cli(id);c.hoy=estado;memoSet(id,ex&&ex.min?ex.min+' min '+(ex.tipo==='tarde'?'tarde':'antes'):'');pintar();toast('Guardando…',8000);
+  api({a:'sesion',id:id,estado:estado+(ex&&ex.min?'|'+ex.tipo+'|'+ex.min:''),rpe:r,fecha:iso(fecha),extra:ex?{dolor:ex.dolor||null,nota:ex.nota||''}:null}).then(function(){toast('Guardado');setTimeout(cargar,2500)})
   .catch(function(e){c.hoy='';pintar();toast('No se guardó: '+e.message,4000)})}
 function deshacer(id){toast('Deshaciendo…',8000);api({a:'deshacer',id:id,fecha:iso(fecha)}).then(function(){cli(id).hoy='';pintar();toast('Deshecho');setTimeout(cargar,2500)})
   .catch(function(e){toast(e.message,4000)})}
@@ -348,6 +420,7 @@ function ficha(id){var c=cli(id);if(!c)return;
   h+='<div class="acts" style="margin-top:14px">';
   if(c.meso)h+='<button onclick="window.open(\''+esc(c.meso)+'\',\'_blank\')">Abrir MESO</button>';
   if(c.carpeta)h+='<button onclick="window.open(\''+esc(c.carpeta)+'\',\'_blank\')">Abrir carpeta</button>';
+  if(c.tel)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2?'Avisar renovación':'WhatsApp')+'</button>';
   h+='</div><div class="acts">';
   if(c.estado==='Activo'){h+='<button class="pri" onclick="nuevoMeso(\''+id+'\')">Nuevo MESO</button><button onclick="pago(\''+c.pagador+'\')">Registrar pago</button><button onclick="extender(\''+c.pagador+'\',7)">Extender plazo 1 sem</button>'}
   h+='</div><div class="acts">';
@@ -361,8 +434,8 @@ function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactiv
   cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
-  '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+  abrir('<h3>Más</h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
 var mesoSel='',semSel=5;
@@ -382,7 +455,7 @@ function selMeso(b){mesoSel=b.getAttribute('data-u');Array.prototype.forEach.cal
 function guardaMeso(id){var i=$('mi').value;if(!mesoSel||!i){toast('Elige el archivo y la fecha');return}cerrar();toast('Abriendo bloque…',8000);
   api({a:'nuevoMeso',id:id,url:mesoSel,semanas:semSel,inicio:i}).then(function(){toast('Nuevo bloque abierto ✓',3000);setTimeout(cargar,2500)}).catch(function(x){toast(x.message,4000)})}
 
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'){fecha=new Date();pintaTitulo();cargar()}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'&&vista!=='sem'&&vista!=='mes'){fecha=new Date();pintaTitulo();cargar()}});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
 if(CFG.u&&CFG.k)iniciar();else pantallaConf();
 </script>
