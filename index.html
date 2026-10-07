@@ -171,8 +171,11 @@ function pintaTitulo(){
   else{var T={pag:['Registrar','Pagos'],ale:['Lo que necesita atención','Alertas'],nue:['Anamnesis','Nuevo cliente']}[vista];t.innerHTML='<small>'+T[0]+'</small>'+T[1];document.querySelector('.flechas').style.display='none'}
 }
 function mover(n){fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
+var nCarga=0;
 function cargar(){
-  api({a:'datos',fecha:iso(fecha)}).then(function(d){D=d;pintar()}).catch(function(e){
+  var n=++nCarga; /* si cambias de día rápido, solo vale la última respuesta */
+  api({a:'datos',fecha:iso(fecha)}).then(function(d){if(n!==nCarga)return;D=d;pintar()}).catch(function(e){
+    if(n!==nCarga)return;
     if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
     $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
 }
@@ -189,6 +192,7 @@ function pintar(){
     $('res').textContent=base.length?hechos+' de '+base.length+' registrados':'';
     if(D.diaLibre)h+='<div class="libre">Sin clases este día · '+esc(D.diaLibre)+'<button onclick="quitarLibre()">Quitar (sí hubo clases)</button></div>';
     var toca=ps.filter(function(c){return c.toca}),otros=ps.filter(function(c){return !c.toca});
+    toca.sort(function(x,y){return String(x.hora||'99').localeCompare(String(y.hora||'99'))});
     var fila=function(c){
       var q=num(c.restantes)?'<span class="q'+(c.restantes<=2?' poco':'')+'">Quedan '+c.restantes+'</span>':'Sin pago registrado';
       var x='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+(c.toca&&c.hora?'<span class="hora">'+esc(c.hora)+'</span>':'')+esc(c.nombre)+'</div></button><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+(c.vieneDe?' · <span class="q">Cambiada desde el '+fcorta(c.vieneDe)+'</span>':'')+'</div>';
@@ -332,7 +336,7 @@ function crearNuevo(){
      '<p class="nota">Ya aparece en Sesiones y Pagos. Falta registrar su primer pago y crear su MESO.</p><button class="sec" onclick="pintaNuevo()">Nueva anamnesis</button>';
     cargarSilencioso()})
   .catch(function(e){toast('No se creó: '+e.message,5000);pintaNuevo()})}
-function cargarSilencioso(){api({a:'datos',fecha:iso(fecha)}).then(function(d){D=d;var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
+function cargarSilencioso(){var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0!==iso(fecha))return;D=d;var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
 
 /* ---------- v3: ficha, día sin clases, plazos, MESO ---------- */
 function ficha(id){var c=cli(id);if(!c)return;
