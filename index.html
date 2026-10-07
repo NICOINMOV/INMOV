@@ -213,6 +213,10 @@ function pintar(){
   if(vista==='nue'){$('res').textContent='';$('main').innerHTML='';pintaNuevo();return}
   $('main').innerHTML=h;
 }
+/* Si el pago tiene un ajuste negativo (sesiones hechas antes de partir el sistema), se cuentan como usadas del plan completo */
+function sesTxt(c){if(!num(c.periodo))return '';var u=Number(c.usadas)||0,t=c.periodo,m=/-(\d+)$/.exec(c.plan||''),tp=m?Number(m[1]):0;
+  if(tp>t){u+=tp-t;t=tp}
+  return u+' de '+t+' usadas · quedan '+c.restantes}
 function cli(id){return D.clientes.filter(function(c){return c.id===id})[0]}
 function abrir(html){$('panel').innerHTML=html;$('capa').className='capa on'}
 function cerrar(){$('capa').className='capa'}
@@ -320,7 +324,7 @@ function cargarSilencioso(){api({a:'datos',fecha:iso(fecha)}).then(function(d){D
 function ficha(id){var c=cli(id);if(!c)return;
   var d=function(a,b){return b===''||b==null?'':'<div class="dato"><span>'+a+'</span><span>'+esc(b)+'</span></div>'};
   var h='<h3>'+esc(c.nombre)+'</h3><p>'+esc(c.modalidad)+(c.horario?' · '+esc(c.horario):'')+'</p>'+
-   d('Estado',c.estado)+d('Pago',c.pago)+d('Sesiones',num(c.periodo)?c.usadas+' de '+c.periodo+' usadas · quedan '+c.restantes:'')+
+   d('Estado',c.estado)+d('Pago',c.pago)+d('Sesiones',sesTxt(c))+
    d('Fallos permitidos disponibles',c.fallos)+d('Plan vence (ref.)',c.vence)+d('Bloque',c.bloque?c.bloque+' · semana '+c.semana:'Sin bloque')+
    d('Fin del bloque',c.finBloque)+d('Última asistencia',c.ultima)+d('Salud activa',c.salud?c.salud+' registro(s)':'');
   h+='<div class="acts" style="margin-top:14px">';
