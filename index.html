@@ -44,6 +44,8 @@ main{padding:6px 18px 10px}
 .acc button{border:0;border-radius:14px;padding:14px 4px;font-size:15px;font-weight:600}
 .vino{background:var(--o);color:#fff}.avi{background:var(--l);color:var(--t)}.fal{background:var(--l);color:var(--r)}
 .hecho{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:11px 14px;border-radius:14px;background:var(--okb);color:var(--ok);font-weight:600;font-size:15px}
+.hecho.mov{background:var(--l);color:var(--t)}
+.lnk{display:block;margin:10px auto 0;background:none;border:0;color:var(--g);font-size:13px;font-weight:500;text-decoration:underline;padding:4px 8px}
 .hecho.no{background:var(--wb);color:var(--w)}
 .hecho button{background:none;border:0;color:inherit;text-decoration:underline;font-size:14px;font-weight:500}
 .tag{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;margin:8px 6px 0 0}
@@ -183,15 +185,16 @@ function pintar(){
   var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':'';
   var h='';
   if(vista==='hoy'){
-    var ps=presenciales(),hechos=ps.filter(function(c){return c.hoy}).length;
-    $('res').textContent=ps.length?hechos+' de '+ps.length+' registrados':'';
+    var ps=presenciales(),base=ps.filter(function(c){return (c.toca&&!c.movidaA)||c.hoy}),hechos=base.filter(function(c){return c.hoy}).length;
+    $('res').textContent=base.length?hechos+' de '+base.length+' registrados':'';
     if(D.diaLibre)h+='<div class="libre">Sin clases este día · '+esc(D.diaLibre)+'<button onclick="quitarLibre()">Quitar (sí hubo clases)</button></div>';
     var toca=ps.filter(function(c){return c.toca}),otros=ps.filter(function(c){return !c.toca});
     var fila=function(c){
       var q=num(c.restantes)?'<span class="q'+(c.restantes<=2?' poco':'')+'">Quedan '+c.restantes+'</span>':'Sin pago registrado';
-      var x='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+(c.toca&&c.hora?'<span class="hora">'+esc(c.hora)+'</span>':'')+esc(c.nombre)+'</div></button><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+'</div>';
+      var x='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+(c.toca&&c.hora?'<span class="hora">'+esc(c.hora)+'</span>':'')+esc(c.nombre)+'</div></button><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+(c.vieneDe?' · <span class="q">Cambiada desde el '+fcorta(c.vieneDe)+'</span>':'')+'</div>';
       if(c.hoy){var ok=c.hoy.indexOf('Asistió')===0;x+='<div class="hecho'+(ok?'':' no')+'"><span>'+(ok?'✓ ':'')+esc(c.hoy+memo(c))+'</span><button onclick="deshacer(\''+c.id+'\')">Deshacer</button></div>'}
-      else if(!D.diaLibre)x+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>';
+      else if(c.movidaA)x+='<div class="hecho mov"><span>↪ Movida al '+fcorta(c.movidaA)+(c.movidaHora?' · '+esc(c.movidaHora):'')+'</span><button onclick="quitarMover(\''+c.id+'\')">Deshacer</button></div>';
+      else if(!D.diaLibre)x+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>'+(c.toca&&!c.vieneDe?'<button class="lnk" onclick="cambiarDia(\''+c.id+'\')">Cambiar de día</button>':'');
       return x+'</div>'};
     if(toca.length){h+='<div class="grp">Les toca hoy</div>';toca.forEach(function(c){h+=fila(c)})}
     if(otros.length){h+='<div class="grp">'+(toca.length?'Otros clientes':'Clientes')+'</div>';otros.forEach(function(c){h+=fila(c)})}
@@ -232,6 +235,17 @@ function otroM(i){pmin=Math.round(Number(i.value)||0);Array.prototype.forEach.ca
 function guardaVino(id){if(!parcial){enviar(id,'Asistió',rpe);return}
   if(!(pmin>=1&&pmin<=59)){toast('Elige cuántos minutos (1 a 59)',3000);return}
   enviar(id,'Asistió parcial',rpe,{min:pmin,tipo:ptipo})}
+var DS=['dom','lun','mar','mié','jue','vie','sáb'];
+function fcorta(s){var p=String(s).split('-');if(p.length<3)return esc(s);var d=new Date(+p[0],+p[1]-1,+p[2]);return DS[d.getDay()]+' '+p[2]+'/'+p[1]}
+function cambiarDia(id){var c=cli(id);
+  abrir('<h3>Cambiar de día</h3><p>'+esc(c.nombre)+' · la sesión del '+fcorta(iso(fecha))+' pasa a:</p><div class="dos"><div><label>Nuevo día</label><input id="mvf" type="date"></div><div><label>Hora</label><input id="mvh" type="time" value="'+esc(/^\d{1,2}:\d{2}$/.test(c.hora||'')?('0'+c.hora).slice(-5):'')+'"></div></div><p style="margin-top:12px">No descuenta sesión ni usa fallos. Ese día aparecerá en "Les toca hoy" y ahí marcas si vino.</p><button class="big" onclick="guardaMover(\''+id+'\')">Guardar cambio</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
+function guardaMover(id){var f=$('mvf').value,h=$('mvh').value;if(!f){toast('Elige el nuevo día',3000);return}
+  if(f===iso(fecha)){toast('Elige un día distinto',3000);return}
+  cerrar();var c=cli(id);c.movidaA=f;c.movidaHora=h;pintar();toast('Guardando…',8000);
+  api({a:'mover',id:id,fecha:iso(fecha),nueva:f,hora:h}).then(function(){toast('Cambio guardado');setTimeout(cargar,1500)})
+  .catch(function(e){c.movidaA='';pintar();toast('No se guardó: '+e.message,4000)})}
+function quitarMover(id){toast('Deshaciendo…',8000);api({a:'quitarMover',id:id,fecha:iso(fecha)}).then(function(){var c=cli(id);c.movidaA='';pintar();toast('Deshecho');setTimeout(cargar,1500)})
+  .catch(function(e){toast(e.message,4000)})}
 function selR(b,i){rpe=i;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
 function aviso(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' avisó</h3><p>¿Con cuánta anticipación?</p><button class="big" onclick="enviar(\''+id+'\',\'Canceló con aviso ≥8 h\')">Con 8 horas o más</button><button class="sec" onclick="enviar(\''+id+'\',\'Canceló con menos de 8 h\')">Con menos de 8 horas</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
 function falto(id){var c=cli(id);abrir('<h3>'+esc(c.nombre)+' no vino</h3><p>No avisó. La sesión se descuenta de su plan.</p><button class="big" onclick="enviar(\''+id+'\',\'No asistió sin aviso\')">Registrar falta</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
