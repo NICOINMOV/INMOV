@@ -362,7 +362,7 @@ var EV=[['Movilidad',[['sentadilla','Sentadilla (con y sin elevación)'],['estoc
  ['Accesorios y aeróbicos',[['plancha','Plancha'],['pullUps','Pull ups'],['legCurl','Leg curl'],['milla','Test de milla'],['testSq','Test de sentadilla (30 en 45")']]]];
 var AN=[['estatura','Estatura (m)','1,75'],['peso','Peso (kg)','70,5'],['grasa','% grasa corporal',''],['musculo','% músculo esquelético',''],['mb','Metabolismo basal (kcal)',''],['edadc','Edad corporal',''],['visceral','Nivel de grasa visceral','']];
 var NV=null,OPC=null,per=0,EDIT=null;
-function nvKey(){return EDIT?'inmov_edit_'+EDIT.id:'inmov_nuevo'}
+function nvKey(){return EDIT?'inmov_edit_'+EDIT.key:'inmov_nuevo'}
 function nvVacio(){return{tipo:'individual',fecha:iso(new Date()),modalidad:'Presencial',plan:'',horario:'',personas:[{},{}]}}
 function nvGuardar(){try{localStorage.setItem(nvKey(),JSON.stringify(NV))}catch(e){}}
 function nvCargar(){try{NV=JSON.parse(localStorage.getItem(nvKey()))}catch(e){}if(!NV||!NV.personas)NV=EDIT?null:nvVacio()}
@@ -379,13 +379,18 @@ function calcs(){var p=NV.personas[per]||{},a=p.antro||{},e=$('calc_edad'),i=$('
 function pintaNuevo(){
   if(!NV)nvCargar();
   if(EDIT&&!NV){$('main').innerHTML='<div class="carga">Cargando su anamnesis…</div>';var eid=EDIT.id;
-    api({a:'anamnesis',id:eid}).then(function(r){if(!EDIT||EDIT.id!==eid)return;NV=r;nvGuardar();pintaNuevo()})
+    api({a:'anamnesis',id:eid}).then(function(r){if(!EDIT||EDIT.id!==eid)return;
+      /* si quedó un borrador individual de antes, se recupera dentro del dúo */
+      (r.personas||[]).forEach(function(p,i){try{var k='inmov_edit_'+p.id;if(k===nvKey())return;var o=JSON.parse(localStorage.getItem(k));
+        if(o&&o.personas&&o.personas[0]){var q=o.personas[0];q.id=p.id;q.archivos=p.archivos;r.personas[i]=q;localStorage.removeItem(k)}}catch(e){}});
+      NV=r;nvGuardar();pintaNuevo()})
     .catch(function(e){$('main').innerHTML='<div class="vacio"><strong>No se pudo cargar</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="pintaNuevo()">Reintentar</button></div>'});return}
-  if(EDIT)NV.tipo='individual';
+  if(EDIT)NV.tipo=NV.personas.length>1?'duo':'individual';
   if(!OPC){$('main').innerHTML='<div class="carga">Cargando…</div>';api({a:'opciones'}).then(function(o){OPC=o;pintaNuevo()}).catch(function(e){$('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'</div>'});return}
   var duo=NV.tipo==='duo';if(!duo)per=0;var b='p'+per,P='personas.'+per;
-  var h=EDIT?'<div class="ok-box" style="text-align:left">Editando la anamnesis de <strong>'+esc(EDIT.nombre)+'</strong>. Al guardar se actualizan su ficha y sus archivos de Drive.'+
-    ((NV.archivos&&(NV.archivos.info||NV.archivos.antro))?'<br>'+(NV.archivos.info?'<a href="'+esc(NV.archivos.info)+'" target="_blank" rel="noopener">Información</a>':'')+(NV.archivos.info&&NV.archivos.antro?' · ':'')+(NV.archivos.antro?'<a href="'+esc(NV.archivos.antro)+'" target="_blank" rel="noopener">Datos antropométricos</a>':''):'<br>No encontré sus archivos en la carpeta; se guardará solo en la ficha.')+'</div>'
+  var AR=EDIT?((NV.personas[per]||{}).archivos||NV.archivos||{}):{};
+  var h=EDIT?'<div class="ok-box" style="text-align:left">Editando la anamnesis de <strong>'+esc(EDIT.nombre)+'</strong>. Al guardar se actualizan '+(duo?'las fichas y archivos de las dos':'su ficha y sus archivos de Drive')+'.'+
+    ((AR.info||AR.antro)?'<br>'+(duo?esc((NV.personas[per]||{}).nombre||'')+': ':'')+(AR.info?'<a href="'+esc(AR.info)+'" target="_blank" rel="noopener">Información</a>':'')+(AR.info&&AR.antro?' · ':'')+(AR.antro?'<a href="'+esc(AR.antro)+'" target="_blank" rel="noopener">Datos antropométricos</a>':''):'<br>No encontré los archivos en la carpeta; se guardará solo en la ficha.')+'</div>'
    :'<div class="seg"><button class="'+(!duo?'on':'')+'" onclick="NV.tipo=\'individual\';nvGuardar();pintaNuevo()">Individual</button><button class="'+(duo?'on':'')+'" onclick="NV.tipo=\'duo\';nvGuardar();pintaNuevo()">Dúo</button></div>';
   h+='<details class="sec2" open><summary>Plan</summary><div class="cnt">'+
    (EDIT?'':'<label>Modalidad</label><div class="opts" style="grid-template-columns:1fr 1fr"><button class="opt'+(NV.modalidad!=='Online'?' on':'')+'" onclick="NV.modalidad=\'Presencial\';nvGuardar();pintaNuevo()">Presencial</button><button class="opt'+(NV.modalidad==='Online'?' on':'')+'" onclick="NV.modalidad=\'Online\';nvGuardar();pintaNuevo()">Online</button></div>')+
@@ -409,13 +414,15 @@ function pintaNuevo(){
    '<p class="nota">Lo que escribes se guarda en el teléfono mientras completas la ficha.</p>';
   $('main').innerHTML=h;calcs();
 }
-function editarAnamnesis(id){var c=cli(id);if(!c)return;cerrar();EDIT={id:id,nombre:c.nombre};NV=null;per=0;nvCargar();ver('nue',true)}
+function editarAnamnesis(id){var c=cli(id);if(!c)return;cerrar();
+  var g=c.grupo?D.clientes.filter(function(x){return x.grupo===c.grupo&&x.estado!=='Inactivo'}):[];
+  EDIT={id:id,key:g.length>1?c.grupo:id,nombre:g.length>1?g.map(function(x){return x.nombre.split(' ')[0]}).join(' y '):c.nombre};NV=null;per=0;nvCargar();ver('nue',true)}
 function salirEdicion(){EDIT=null;NV=null;ver('hoy')}
-function guardaEdicion(){var p=NV.personas[0]||{};
-  if(!p.nombre||!p.apellido){toast('Falta nombre y apellido',3000);return}
+function guardaEdicion(){var ps=NV.personas.filter(Boolean);
+  for(var i=0;i<ps.length;i++){if(!ps[i].nombre||!ps[i].apellido){toast('Falta nombre y apellido'+(ps.length>1?' de la persona '+(i+1):''),3000);return}}
   if(!NV.plan){toast('Elige el plan',3000);return}
   $('main').innerHTML='<div class="carga">Guardando cambios…</div>';
-  var datos=JSON.parse(JSON.stringify(NV));datos.personas=[p];var e=EDIT;
+  var datos=JSON.parse(JSON.stringify(NV));datos.personas=ps;var e=EDIT;
   api({a:'editarAnamnesis',id:e.id,datos:datos}).then(function(r){
     try{localStorage.removeItem(nvKey())}catch(x){}
     $('main').innerHTML='<div class="ok-box"><strong>Anamnesis de '+esc(e.nombre)+' actualizada</strong>'+(r.avisos&&r.avisos.length?'<br><br>'+r.avisos.map(esc).join('<br>'):'')+'</div><button class="sec" onclick="salirEdicion()">Volver a Sesiones</button>';
