@@ -186,7 +186,7 @@ function pintaTitulo(){
     document.querySelector('.flechas').style.display='flex'}
   else if(vista==='mes'){t.innerHTML='<small>Resumen del mes</small>'+MESES[mesRef.getMonth()].charAt(0).toUpperCase()+MESES[mesRef.getMonth()].slice(1)+' '+mesRef.getFullYear();
     document.querySelector('.flechas').style.display='flex'}
-  else{var T={pag:['Registrar','Pagos'],ale:['Lo que necesita atención','Alertas'],nue:['Anamnesis','Nuevo cliente']}[vista];t.innerHTML='<small>'+T[0]+'</small>'+T[1];document.querySelector('.flechas').style.display='none'}
+  else{var T={pag:['Registrar','Pagos'],ale:['Lo que necesita atención','Alertas'],nue:EDIT?['Editar anamnesis',EDIT.nombre]:['Anamnesis','Nuevo cliente']}[vista];t.innerHTML='<small>'+T[0]+'</small>'+T[1];document.querySelector('.flechas').style.display='none'}
 }
 function mover(n){
   if(vista==='sem'){semRef.setDate(semRef.getDate()+7*n);pintaTitulo();cargarSem();return}
@@ -200,7 +200,7 @@ function cargar(){
     if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
     $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
 }
-function ver(v){vista=v;['hoy','pag','ale','nue'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar();if(v==='sem')cargarSem();if(v==='mes')cargarMes()}
+function ver(v,keep){if(v==='nue'&&!keep&&EDIT){EDIT=null;NV=null}vista=v;['hoy','pag','ale','nue'].forEach(function(x){$('n-'+x).className=x===v?'on':''});pintaTitulo();pintar();if(v==='sem')cargarSem();if(v==='mes')cargarMes()}
 function tag(t){if(!t)return'';var c=/Agotado|Vencido/.test(t)?'t-r':(t==='OK'||t==='Vigente')?'t-ok':'t-w';return '<span class="tag '+c+'">'+esc(t)+'</span>'}
 function num(x){return x!==''&&x!==null&&!isNaN(x)}
 function presenciales(){return D.clientes.filter(function(c){return c.estado==='Activo'&&!/Online/i.test(c.modalidad)})}
@@ -361,10 +361,11 @@ var EV=[['Movilidad',[['sentadilla','Sentadilla (con y sin elevación)'],['estoc
  ['Fuerza y técnica',[['pressHombros','Press de hombros'],['banca','Press banca DB'],['squat','Back squat barra (o variante)'],['legExt','Leg extension'],['rdl','Romanian deadlift (RDL)'],['pushUp','Push up'],['jalon','Jalón polea agarre amplio']]],
  ['Accesorios y aeróbicos',[['plancha','Plancha'],['pullUps','Pull ups'],['legCurl','Leg curl'],['milla','Test de milla'],['testSq','Test de sentadilla (30 en 45")']]]];
 var AN=[['estatura','Estatura (m)','1,75'],['peso','Peso (kg)','70,5'],['grasa','% grasa corporal',''],['musculo','% músculo esquelético',''],['mb','Metabolismo basal (kcal)',''],['edadc','Edad corporal',''],['visceral','Nivel de grasa visceral','']];
-var NV=null,OPC=null,per=0;
+var NV=null,OPC=null,per=0,EDIT=null;
+function nvKey(){return EDIT?'inmov_edit_'+EDIT.id:'inmov_nuevo'}
 function nvVacio(){return{tipo:'individual',fecha:iso(new Date()),modalidad:'Presencial',plan:'',horario:'',personas:[{},{}]}}
-function nvGuardar(){try{localStorage.setItem('inmov_nuevo',JSON.stringify(NV))}catch(e){}}
-function nvCargar(){try{NV=JSON.parse(localStorage.getItem('inmov_nuevo'))}catch(e){}if(!NV||!NV.personas)NV=nvVacio()}
+function nvGuardar(){try{localStorage.setItem(nvKey(),JSON.stringify(NV))}catch(e){}}
+function nvCargar(){try{NV=JSON.parse(localStorage.getItem(nvKey()))}catch(e){}if(!NV||!NV.personas)NV=EDIT?null:nvVacio()}
 function campo(path,label,ph,tipo){var v=leer(path);var id='f_'+path.replace(/\./g,'_');
   if(tipo==='area')return '<label for="'+id+'">'+label+'</label><textarea id="'+id+'" placeholder="'+esc(ph||'')+'" oninput="esc2(\''+path+'\',this.value)">'+esc(v)+'</textarea>';
   return '<label for="'+id+'">'+label+'</label><input id="'+id+'" type="'+(tipo||'text')+'"'+(tipo==='decimal'?' inputmode="decimal"':'')+' placeholder="'+esc(ph||'')+'" value="'+esc(v)+'" oninput="esc2(\''+path+'\',this.value)">'}
@@ -377,11 +378,17 @@ function calcs(){var p=NV.personas[per]||{},a=p.antro||{},e=$('calc_edad'),i=$('
   if(i)i.innerHTML=(est>0&&pe>0)?'IMC: <b>'+(Math.round(pe/(est*est)*10)/10).toString().replace('.',',')+'</b>':''}
 function pintaNuevo(){
   if(!NV)nvCargar();
+  if(EDIT&&!NV){$('main').innerHTML='<div class="carga">Cargando su anamnesis…</div>';var eid=EDIT.id;
+    api({a:'anamnesis',id:eid}).then(function(r){if(!EDIT||EDIT.id!==eid)return;NV=r;nvGuardar();pintaNuevo()})
+    .catch(function(e){$('main').innerHTML='<div class="vacio"><strong>No se pudo cargar</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="pintaNuevo()">Reintentar</button></div>'});return}
+  if(EDIT)NV.tipo='individual';
   if(!OPC){$('main').innerHTML='<div class="carga">Cargando…</div>';api({a:'opciones'}).then(function(o){OPC=o;pintaNuevo()}).catch(function(e){$('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'</div>'});return}
   var duo=NV.tipo==='duo';if(!duo)per=0;var b='p'+per,P='personas.'+per;
-  var h='<div class="seg"><button class="'+(!duo?'on':'')+'" onclick="NV.tipo=\'individual\';nvGuardar();pintaNuevo()">Individual</button><button class="'+(duo?'on':'')+'" onclick="NV.tipo=\'duo\';nvGuardar();pintaNuevo()">Dúo</button></div>';
+  var h=EDIT?'<div class="ok-box" style="text-align:left">Editando la anamnesis de <strong>'+esc(EDIT.nombre)+'</strong>. Al guardar se actualizan su ficha y sus archivos de Drive.'+
+    ((NV.archivos&&(NV.archivos.info||NV.archivos.antro))?'<br>'+(NV.archivos.info?'<a href="'+esc(NV.archivos.info)+'" target="_blank" rel="noopener">Información</a>':'')+(NV.archivos.info&&NV.archivos.antro?' · ':'')+(NV.archivos.antro?'<a href="'+esc(NV.archivos.antro)+'" target="_blank" rel="noopener">Datos antropométricos</a>':''):'<br>No encontré sus archivos en la carpeta; se guardará solo en la ficha.')+'</div>'
+   :'<div class="seg"><button class="'+(!duo?'on':'')+'" onclick="NV.tipo=\'individual\';nvGuardar();pintaNuevo()">Individual</button><button class="'+(duo?'on':'')+'" onclick="NV.tipo=\'duo\';nvGuardar();pintaNuevo()">Dúo</button></div>';
   h+='<details class="sec2" open><summary>Plan</summary><div class="cnt">'+
-   '<label>Modalidad</label><div class="opts" style="grid-template-columns:1fr 1fr"><button class="opt'+(NV.modalidad!=='Online'?' on':'')+'" onclick="NV.modalidad=\'Presencial\';nvGuardar();pintaNuevo()">Presencial</button><button class="opt'+(NV.modalidad==='Online'?' on':'')+'" onclick="NV.modalidad=\'Online\';nvGuardar();pintaNuevo()">Online</button></div>'+
+   (EDIT?'':'<label>Modalidad</label><div class="opts" style="grid-template-columns:1fr 1fr"><button class="opt'+(NV.modalidad!=='Online'?' on':'')+'" onclick="NV.modalidad=\'Presencial\';nvGuardar();pintaNuevo()">Presencial</button><button class="opt'+(NV.modalidad==='Online'?' on':'')+'" onclick="NV.modalidad=\'Online\';nvGuardar();pintaNuevo()">Online</button></div>')+
    '<label for="f_plan">Plan</label><select id="f_plan" onchange="esc2(\'plan\',this.value)"><option value="">Elegir…</option>'+(D?D.planes:[]).map(function(p){return '<option value="'+esc(p.id)+'"'+(NV.plan===p.id?' selected':'')+'>'+esc(p.nombre)+'</option>'}).join('')+'</select>'+
    campo('horario','Días y horarios','Lu-Mi-Vi 11:00')+campo('fecha','Fecha de la evaluación','','date')+'</div></details>';
   if(duo)h+='<div class="seg" style="margin-top:14px"><button class="'+(per===0?'on':'')+'" onclick="per=0;pintaNuevo()">'+esc(leer('personas.0.nombre')||'Persona 1')+'</button><button class="'+(per===1?'on':'')+'" onclick="per=1;pintaNuevo()">'+esc(leer('personas.1.nombre')||'Persona 2')+'</button></div>';
@@ -396,10 +403,24 @@ function pintaNuevo(){
   h+='<details class="sec2"><summary>Salud</summary><div class="cnt">'+campo(P+'.lesiones','Lesiones','','area')+campo(P+'.enfermedades','Enfermedades metabólicas','','area')+campo(P+'.notas','Medicamentos y otras notas','','area')+'<p class="nota">Las lesiones y enfermedades quedan también en 08_SALUD.</p></div></details>';
   EV.forEach(function(g){h+='<details class="sec2"><summary>'+g[0]+'</summary><div class="cnt">'+g[1].map(function(c){return campo(P+'.eval.'+c[0],c[1],'Observaciones, cargas, reps…')}).join('')+'</div></details>'});
   h+='<details class="sec2"><summary>Composición corporal</summary><div class="cnt"><div class="dos">'+AN.map(function(c){return '<div>'+campo(P+'.antro.'+c[0],c[1],c[2],'decimal')+'</div>'}).join('')+'</div><div class="calc" id="calc_imc"></div></div></details>';
-  h+='<button class="big" style="margin-top:18px" onclick="crearNuevo()">Crear '+(duo?'dúo':'cliente')+'</button><button class="sec" onclick="if(confirm(\'¿Borrar todo lo escrito?\')){NV=nvVacio();nvGuardar();per=0;pintaNuevo()}">Empezar de nuevo</button>'+
+  if(EDIT)h+='<button class="big" style="margin-top:18px" onclick="guardaEdicion()">Guardar cambios</button><button class="sec" onclick="if(confirm(\'¿Descartar lo que cambiaste y volver a cargar lo guardado?\')){try{localStorage.removeItem(nvKey())}catch(e){}NV=null;pintaNuevo()}">Descartar cambios</button><button class="sec" onclick="salirEdicion()">Volver</button>'+
+   '<p class="nota">Lo que cambias se guarda en el teléfono hasta que toques "Guardar cambios", así puedes seguir otro día.</p>';
+  else h+='<button class="big" style="margin-top:18px" onclick="crearNuevo()">Crear '+(duo?'dúo':'cliente')+'</button><button class="sec" onclick="if(confirm(\'¿Borrar todo lo escrito?\')){NV=nvVacio();nvGuardar();per=0;pintaNuevo()}">Empezar de nuevo</button>'+
    '<p class="nota">Lo que escribes se guarda en el teléfono mientras completas la ficha.</p>';
   $('main').innerHTML=h;calcs();
 }
+function editarAnamnesis(id){var c=cli(id);if(!c)return;cerrar();EDIT={id:id,nombre:c.nombre};NV=null;per=0;nvCargar();ver('nue',true)}
+function salirEdicion(){EDIT=null;NV=null;ver('hoy')}
+function guardaEdicion(){var p=NV.personas[0]||{};
+  if(!p.nombre||!p.apellido){toast('Falta nombre y apellido',3000);return}
+  if(!NV.plan){toast('Elige el plan',3000);return}
+  $('main').innerHTML='<div class="carga">Guardando cambios…</div>';
+  var datos=JSON.parse(JSON.stringify(NV));datos.personas=[p];var e=EDIT;
+  api({a:'editarAnamnesis',id:e.id,datos:datos}).then(function(r){
+    try{localStorage.removeItem(nvKey())}catch(x){}
+    $('main').innerHTML='<div class="ok-box"><strong>Anamnesis de '+esc(e.nombre)+' actualizada</strong>'+(r.avisos&&r.avisos.length?'<br><br>'+r.avisos.map(esc).join('<br>'):'')+'</div><button class="sec" onclick="salirEdicion()">Volver a Sesiones</button>';
+    EDIT=null;NV=null;cargarSilencioso()})
+  .catch(function(x){toast('No se guardó: '+x.message,5000);pintaNuevo()})}
 function crearNuevo(){
   var duo=NV.tipo==='duo',ps=duo?NV.personas.slice(0,2):[NV.personas[0]];
   for(var i=0;i<ps.length;i++){if(!ps[i]||!ps[i].nombre||!ps[i].apellido){toast('Falta nombre y apellido'+(duo?' de '+(i?'la persona 2':'la persona 1'):''),3000);return}}
@@ -426,6 +447,7 @@ function ficha(id){var c=cli(id);if(!c)return;
   h+='<div class="acts" style="margin-top:14px">';
   if(c.meso)h+='<button onclick="window.open(\''+esc(c.meso)+'\',\'_blank\')">Abrir MESO</button>';
   if(c.carpeta)h+='<button onclick="window.open(\''+esc(c.carpeta)+'\',\'_blank\')">Abrir carpeta</button>';
+  h+='<button onclick="editarAnamnesis(\''+id+'\')">Editar anamnesis</button>';
   if(c.tel||c.grupo)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2?(c.grupo?'Avisar renovación al grupo':'Avisar renovación'):'WhatsApp')+'</button>';
   h+='</div><div class="acts">';
   if(c.estado==='Activo'){h+='<button class="pri" onclick="nuevoMeso(\''+id+'\')">Nuevo MESO</button><button onclick="pago(\''+c.pagador+'\')">Registrar pago</button><button onclick="extender(\''+c.pagador+'\',7)">Extender plazo 1 sem</button>'}
