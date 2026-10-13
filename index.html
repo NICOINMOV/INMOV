@@ -27,6 +27,7 @@ header{background:var(--k);color:#fff;padding:calc(10px + env(safe-area-inset-to
 .top{display:flex;justify-content:space-between;align-items:center}
 .logo img{height:30px;display:block}
 .ref{background:none;border:0;color:#9a9a9a;font-size:22px;padding:4px 6px}
+.ref.gira{animation:gira .8s linear infinite;color:#fff}@keyframes gira{to{transform:rotate(360deg)}}
 .dia{display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px}
 .dia h1{margin:0;font-size:30px;line-height:1.05;font-weight:700}
 .dia h1 small{display:block;font-size:13px;font-weight:500;color:var(--o);margin-bottom:4px}
@@ -167,7 +168,7 @@ function conectar(){
 
 /* ---------- App ---------- */
 function iniciar(){
-  $('app').innerHTML='<header><div class="top"><div class="logo"><img src="logo-blanco.png" alt="INMOV"></div><button class="ref" aria-label="Actualizar" onclick="cargar()">↻</button></div>'+
+  $('app').innerHTML='<header><div class="top"><div class="logo"><img src="logo-blanco.png" alt="INMOV"></div><button class="ref" aria-label="Actualizar" onclick="refrescar()">↻</button></div>'+
   '<div class="dia" id="dia"><h1 id="titulo"></h1><div class="flechas"><button class="mas-dia" aria-label="Opciones del día" onclick="menuDia()">⋯</button><button aria-label="Día anterior" onclick="mover(-1)">‹</button><button aria-label="Día siguiente" onclick="mover(1)">›</button></div></div>'+
   '<div class="res" id="res"></div></header><main id="main"><div class="carga">Cargando…</div></main>'+
   '<nav><button id="n-hoy" class="on" onclick="ver(\'hoy\')"><span class="ic">✓</span>Sesiones</button>'+
@@ -193,6 +194,14 @@ function mover(n){
   if(vista==='mes'){mesRef=new Date(mesRef.getFullYear(),mesRef.getMonth()+n,1);pintaTitulo();cargarMes();return}
   fecha.setDate(fecha.getDate()+n);pintaTitulo();$('main').innerHTML='<div class="carga">Cargando…</div>';cargar()}
 var nCarga=0;
+function refrescar(){var b=document.querySelector('.ref');if(b)b.className='ref gira';
+  var fin=function(m){if(b)b.className='ref';if(m)toast(m,2000)};
+  try{navigator.serviceWorker.getRegistration().then(function(r){if(r)r.update()}).catch(function(){})}catch(e){}
+  if(vista==='sem'){cargarSem();setTimeout(function(){fin('Actualizado')},900);return}
+  if(vista==='mes'){cargarMes();setTimeout(function(){fin('Actualizado')},900);return}
+  if(vista==='hoy')$('main').innerHTML='<div class="carga">Actualizando…</div>';
+  var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0===iso(fecha)){D=d;if(vista!=='nue')pintar();else{var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}}fin('Actualizado')})
+  .catch(function(e){fin('Sin conexión: '+e.message);if(vista==='hoy')pintar()})}
 function cargar(){
   var n=++nCarga; /* si cambias de día rápido, solo vale la última respuesta */
   api({a:'datos',fecha:iso(fecha)}).then(function(d){if(n!==nCarga)return;D=d;pintar()}).catch(function(e){
@@ -491,7 +500,9 @@ function guardaMeso(id){var i=$('mi').value;if(!mesoSel||!i){toast('Elige el arc
   api({a:'nuevoMeso',id:id,url:mesoSel,semanas:semSel,inicio:i}).then(function(){toast('Nuevo bloque abierto ✓',3000);setTimeout(cargar,2500)}).catch(function(x){toast(x.message,4000)})}
 
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'&&vista!=='sem'&&vista!=='mes'){fecha=new Date();pintaTitulo();cargar()}});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if('serviceWorker' in navigator){var swPrevio=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js').catch(function(){});
+  /* cuando hay una versión nueva de la app, se recarga sola (los borradores quedan guardados) */
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(swPrevio&&!window._recargando){window._recargando=1;location.reload()}})}
 if(CFG.u&&CFG.k)iniciar();else pantallaConf();
 </script>
 </body>
