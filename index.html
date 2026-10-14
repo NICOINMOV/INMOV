@@ -379,9 +379,18 @@ function campo(path,label,ph,tipo){var v=leer(path);var id='f_'+path.replace(/\.
   if(tipo==='area')return '<label for="'+id+'">'+label+'</label><textarea id="'+id+'" placeholder="'+esc(ph||'')+'" oninput="esc2(\''+path+'\',this.value)">'+esc(v)+'</textarea>';
   return '<label for="'+id+'">'+label+'</label><input id="'+id+'" type="'+(tipo||'text')+'"'+(tipo==='decimal'?' inputmode="decimal"':'')+' placeholder="'+esc(ph||'')+'" value="'+esc(v)+'" oninput="esc2(\''+path+'\',this.value)">'}
 function leer(path){var o=NV;path.split('.').forEach(function(k){o=o==null?'':o[k]});return o==null?'':o}
-function esc2(path,v){var ks=path.split('.'),o=NV;for(var i=0;i<ks.length-1;i++){if(o[ks[i]]==null)o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=v;nvGuardar();if(/antro\.(peso|estatura)|nac/.test(path))calcs()}
+function esc2(path,v){var ks=path.split('.'),o=NV;for(var i=0;i<ks.length-1;i++){if(o[ks[i]]==null)o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=v;nvGuardar();if(/antro\.(peso|estatura)|nac/.test(path))calcs();if(path==='horario')calcHor()}
 function edadDe(n){if(!n)return'';var h=new Date(),d=new Date(n+'T12:00:00'),e=h.getFullYear()-d.getFullYear();if(h.getMonth()<d.getMonth()||(h.getMonth()===d.getMonth()&&h.getDate()<d.getDate()))e--;return e}
-function calcs(){var p=NV.personas[per]||{},a=p.antro||{},e=$('calc_edad'),i=$('calc_imc');
+/* misma lectura del horario que hace el sistema, para ver cómo quedó entendido */
+function leerHorario(txt){var out={},t=String(txt||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
+  var re=/(^|[^a-z])(lunes|martes|miercoles|jueves|viernes|sabado|domingo|lu|ma|mi|ju|vi|sa|do)(?![a-z])|(\d{1,2})(?::(\d{2}))?\s*(am|pm|hrs|h)?/g,m,pend=[],ult='';
+  while((m=re.exec(t))!==null){if(m[2]){pend.push(m[2].slice(0,2));continue}var hh=+m[3],mm=m[4]||'00';if(m[5]==='pm'&&hh<12)hh+=12;if(hh>23)continue;
+    ult=('0'+hh).slice(-2)+':'+mm;pend.forEach(function(d){out[d]=ult});pend=[]}
+  pend.forEach(function(d){out[d]=ult});return out}
+function calcHor(){var e=$('calc_hor');if(!e)return;var v=leerHorario(NV.horario),N={lu:'Lunes',ma:'Martes',mi:'Miércoles',ju:'Jueves',vi:'Viernes',sa:'Sábado',do:'Domingo'};
+  var k=['lu','ma','mi','ju','vi','sa','do'].filter(function(x){return x in v});
+  e.innerHTML=k.length?'La app lo entiende como: <b>'+k.map(function(x){return N[x]+(v[x]?' '+v[x]:' (sin hora)')}).join(' · ')+'</b>':(NV.horario?'<span style="color:var(--r)">No reconozco días en este horario</span>':'')}
+function calcs(){calcHor();var p=NV.personas[per]||{},a=p.antro||{},e=$('calc_edad'),i=$('calc_imc');
   if(e)e.innerHTML=p.nac?'Edad: <b>'+edadDe(p.nac)+' años</b>':'';
   var est=parseFloat(String(a.estatura||'').replace(',','.')),pe=parseFloat(String(a.peso||'').replace(',','.'));if(est>3)est=est/100;
   if(i)i.innerHTML=(est>0&&pe>0)?'IMC: <b>'+(Math.round(pe/(est*est)*10)/10).toString().replace('.',',')+'</b>':''}
@@ -404,7 +413,7 @@ function pintaNuevo(){
   h+='<details class="sec2" open><summary>Plan</summary><div class="cnt">'+
    (EDIT?'':'<label>Modalidad</label><div class="opts" style="grid-template-columns:1fr 1fr"><button class="opt'+(NV.modalidad!=='Online'?' on':'')+'" onclick="NV.modalidad=\'Presencial\';nvGuardar();pintaNuevo()">Presencial</button><button class="opt'+(NV.modalidad==='Online'?' on':'')+'" onclick="NV.modalidad=\'Online\';nvGuardar();pintaNuevo()">Online</button></div>')+
    '<label for="f_plan">Plan</label><select id="f_plan" onchange="esc2(\'plan\',this.value)"><option value="">Elegir…</option>'+(D?D.planes:[]).map(function(p){return '<option value="'+esc(p.id)+'"'+(NV.plan===p.id?' selected':'')+'>'+esc(p.nombre)+'</option>'}).join('')+'</select>'+
-   campo('horario','Días y horarios','Lu-Mi-Vi 11:00')+campo('fecha','Fecha de la evaluación','','date')+'</div></details>';
+   campo('horario','Días y horarios','Ej: Lu 19:00, Mi 16:00')+'<div class="calc" id="calc_hor"></div>'+campo('fecha','Fecha de la evaluación','','date')+'</div></details>';
   if(duo)h+='<div class="seg" style="margin-top:14px"><button class="'+(per===0?'on':'')+'" onclick="per=0;pintaNuevo()">'+esc(leer('personas.0.nombre')||'Persona 1')+'</button><button class="'+(per===1?'on':'')+'" onclick="per=1;pintaNuevo()">'+esc(leer('personas.1.nombre')||'Persona 2')+'</button></div>';
   var sx=leer(P+'.sexo');
   h+='<details class="sec2" open><summary>Datos personales</summary><div class="cnt"><div class="dos"><div>'+campo(P+'.nombre','Nombre')+'</div><div>'+campo(P+'.apellido','Apellido')+'</div></div>'+
@@ -478,7 +487,7 @@ function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactiv
   cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 15</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 16</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
   '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
