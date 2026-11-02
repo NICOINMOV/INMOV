@@ -200,11 +200,15 @@ function refrescar(){var b=document.querySelector('.ref');if(b)b.className='ref 
   if(vista==='sem'){cargarSem();setTimeout(function(){fin('Actualizado')},900);return}
   if(vista==='mes'){cargarMes();setTimeout(function(){fin('Actualizado')},900);return}
   if(vista==='hoy')$('main').innerHTML='<div class="carga">Actualizando…</div>';
-  var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0===iso(fecha)){D=d;if(vista!=='nue')pintar();else{var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}}fin('Actualizado')})
+  var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0===iso(fecha)){D=limpiar(d);if(vista!=='nue')pintar();else{var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}}fin('Actualizado')})
   .catch(function(e){fin('Sin conexión: '+e.message);if(vista==='hoy')pintar()})}
+/* Avisos que no quieres ver: "Preparar cierre" del bloque */
+function limpiar(d){if(!d||!d.alertas)return d;
+  d.alertas=d.alertas.map(function(a){var t=String(a.texto||'').split(' · ').filter(function(x){return !/Preparar cierre/i.test(x)}).join(' · ');a.texto=t;return a}).filter(function(a){return a.texto});
+  return d}
 function cargar(){
   var n=++nCarga; /* si cambias de día rápido, solo vale la última respuesta */
-  api({a:'datos',fecha:iso(fecha)}).then(function(d){if(n!==nCarga)return;D=d;pintar()}).catch(function(e){
+  api({a:'datos',fecha:iso(fecha)}).then(function(d){if(n!==nCarga)return;D=limpiar(d);pintar()}).catch(function(e){
     if(n!==nCarga)return;
     if(/Clave/.test(e.message)){pantallaConf('La clave cambió. Ingresa la nueva.');return}
     $('main').innerHTML='<div class="vacio"><strong>Sin conexión</strong>'+esc(e.message)+'<br><br><button class="sec" onclick="cargar()">Reintentar</button></div>'})
@@ -460,7 +464,7 @@ function crearNuevo(){
      '<p class="nota">Ya aparece en Sesiones y Pagos. Falta registrar su primer pago y crear su MESO.</p><button class="sec" onclick="pintaNuevo()">Nueva anamnesis</button>';
     cargarSilencioso()})
   .catch(function(e){toast('No se creó: '+e.message,5000);pintaNuevo()})}
-function cargarSilencioso(){var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0!==iso(fecha))return;D=d;var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
+function cargarSilencioso(){var f0=iso(fecha);api({a:'datos',fecha:f0}).then(function(d){if(f0!==iso(fecha))return;D=limpiar(d);var n=D.alertas.length;$('nb').innerHTML=n?'<span class="badge">'+n+'</span>':''}).catch(function(){})}
 
 /* ---------- v3: ficha, día sin clases, plazos, MESO ---------- */
 function ficha(id){var c=cli(id);if(!c)return;
@@ -487,7 +491,7 @@ function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactiv
   cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 17</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 18</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
   '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
