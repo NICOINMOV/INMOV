@@ -58,6 +58,8 @@ main{padding:6px 18px 10px}
 .sf:last-child{border-bottom:0}.sf .hora{margin:0;vertical-align:0}.sf .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sf .e{font-size:12px;font-weight:600;white-space:nowrap}.sf .e.ok{color:var(--ok)}.sf .e.no{color:var(--w)}.sf .e.mv{color:var(--g)}
 .snada{color:var(--g);font-size:14px;padding:6px 0}
+.cal{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;border-radius:14px;background:#EAF2FF;color:#1D4E89;font-size:14px}
+.cal button{flex:none;border:0;background:#1D4E89;color:#fff;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600}
 .hecho.mov{background:var(--l);color:var(--t)}
 .lnk{display:block;margin:10px auto 0;background:none;border:0;color:var(--g);font-size:13px;font-weight:500;text-decoration:underline;padding:4px 8px}
 .hecho.no{background:var(--wb);color:var(--w)}
@@ -230,6 +232,7 @@ function pintar(){
     var fila=function(c){
       var q=num(c.restantes)?'<span class="q'+(c.restantes<=2?' poco':'')+'">Quedan '+c.restantes+'</span>':'Sin pago registrado';
       var x='<div class="cli"><button class="nmb" onclick="ficha(\''+c.id+'\')"><div class="nm">'+(c.toca&&c.hora?'<span class="hora">'+esc(c.hora)+'</span>':'')+esc(c.nombre)+'</div></button><div class="sub">'+q+(c.bloque?', semana '+esc(c.semana)+' de su bloque':'')+(c.vieneDe?' · <span class="q">Cambiada desde el '+fcorta(c.vieneDe)+'</span>':'')+'</div>';
+      if(c.calendario&&!c.hoy&&!c.movidaA)x+='<div class="cal"><span>✈ Según tu calendario: <b>'+esc(c.calendario)+'</b></span><button onclick="aviso(\''+c.id+'\')">Registrar aviso</button></div>';
       if(c.hoy){var ok=c.hoy.indexOf('Asistió')===0;x+='<div class="hecho'+(ok?'':' no')+'"><span>'+(ok?'✓ ':'')+esc(c.hoy+memo(c))+'</span><button onclick="deshacer(\''+c.id+'\')">Deshacer</button></div>'}
       else if(c.movidaA)x+='<div class="hecho mov"><span>↪ Movida al '+fcorta(c.movidaA)+(c.movidaHora?' · '+esc(c.movidaHora):'')+'</span><button onclick="quitarMover(\''+c.id+'\')">Deshacer</button></div>';
       else if(!D.diaLibre)x+='<div class="acc"><button class="vino" onclick="vino(\''+c.id+'\')">Vino</button><button class="avi" onclick="aviso(\''+c.id+'\')">Avisó</button><button class="fal" onclick="falto(\''+c.id+'\')">Faltó</button></div>'+(c.toca&&!c.vieneDe?'<button class="lnk" onclick="cambiarDia(\''+c.id+'\')">Cambiar de día</button>':'');
@@ -325,6 +328,7 @@ function pintaSem(){if(!SEM){$('res').textContent='';$('main').innerHTML='<div c
     else d.items.forEach(function(i){var e='',k='';
       if(i.estado){var ok=i.estado.indexOf('Asistió')===0;k=ok?'ok':'no';e=ok?'✓ Vino':/≥8/.test(i.estado)?'Avisó':/menos/.test(i.estado)?'Avisó tarde':'Faltó'}
       else if(i.vieneDe){k='mv';e='↪ del '+fcorta(i.vieneDe)}
+      else if(i.calendario){k='mv';e='✈ viaje'}
       h+='<div class="sf">'+(i.hora?'<span class="hora">'+esc(i.hora)+'</span>':'')+'<span class="n">'+esc(i.nombre)+'</span>'+(e?'<span class="e '+k+'">'+e+'</span>':'')+'</div>'})});
   $('res').textContent=tot+(tot===1?' sesión':' sesiones')+' en la semana';$('main').innerHTML=h||'<div class="vacio"><strong>Semana sin sesiones</strong></div>'}
 /* ---------- Resumen del mes ---------- */
@@ -491,7 +495,7 @@ function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactiv
   cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 18</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 19</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
   '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
