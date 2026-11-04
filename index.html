@@ -243,7 +243,7 @@ function pintar(){
   if(vista==='sem'){pintaSem();return}
   if(vista==='mes'){pintaMes();return}
   if(vista==='pag'){$('res').textContent='Toca un cliente para registrar su pago';h+='<div class="acts" style="margin:14px 0 4px"><button onclick="ver(\'mes\')">Ver resumen del mes</button></div>';
-    D.pagadores.forEach(function(p){h+='<button class="pg" onclick="pago(\''+p.id+'\')"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+(num(p.restantes)?'Quedan '+p.restantes+' sesiones':'Plan online')+(p.vence?', referencia '+esc(p.vence):'')+'</div>'+tag(p.pago)+'</div><span class="mas">+</span></button>'})}
+    D.pagadores.forEach(function(p){h+='<button class="pg" onclick="pago(\''+p.id+'\')"><div><div class="nm">'+esc(p.nombre)+'</div><div class="sub">'+(num(p.restantes)?'Quedan '+p.restantes+' sesiones':'Plan online')+(p.vence?', referencia '+esc(p.vence):'')+(p.espera?' · <b>pago adelantado en espera</b>':'')+'</div>'+tag(p.pago)+'</div><span class="mas">+</span></button>'})}
   if(vista==='ale'){$('res').textContent=n?n+(n===1?' cliente':' clientes'):'';
     if(!n)h='<div class="vacio"><strong>Todo al día</strong>No hay renovaciones, cierres ni ausencias pendientes.</div>';
     else D.alertas.forEach(function(a){
@@ -303,7 +303,7 @@ function wsp(id){var c=cli(id);if(!c){return}
   if(!duo&&!c.tel){toast('Ese cliente no tiene teléfono registrado',3000);return}
   var t=String(c.tel||'').replace(/\D/g,'');if(t.length===9&&t.charAt(0)==='9')t='56'+t;if(t.length===8)t='569'+t;
   var n=duo?duo.map(function(x){return x.nombre.split(' ')[0]}).join(' y '):c.nombre.split(' ')[0],m='',r=c.restantes;
-  if(num(r)&&r<=2){
+  if(num(r)&&r<=2&&!c.espera){
     var q=r>0?(r===1?'queda 1 sesión':'quedan '+r+' sesiones'):'';
     if(duo)m='Hola '+n+'! 👋 Les informo que '+(r>0?q+' de su plan, para seguir sin pausas pueden renovar cuando quieran.':'ya completaron las sesiones de su plan, para seguir entrenando pueden renovar cuando quieran.')+' Cualquier duda me avisan 💪';
     else m='Hola '+n+'! 👋 Te informo que '+(r>0?q+' de tu plan, para seguir sin pausas puedes renovar cuando quieras.':'ya completaste las sesiones de tu plan, para seguir entrenando puedes renovar cuando quieras.')+' Cualquier duda me avisas 💪'}
@@ -356,21 +356,25 @@ function enviar(id,estado,r,ex){cerrar();var c=cli(id);c.hoy=estado;memoSet(id,e
   .catch(function(e){c.hoy='';pintar();toast('No se guardó: '+e.message,4000)})}
 function deshacer(id){toast('Deshaciendo…',8000);api({a:'deshacer',id:id,fecha:iso(fecha)}).then(function(){cli(id).hoy='';pintar();toast('Deshecho');setTimeout(cargar,2500)})
   .catch(function(e){toast(e.message,4000)})}
-function pagoForm(p){var pid=p.id;cerrar();met='Transferencia';
+var espSel=0;
+function selEsp(b,v){espSel=v;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className='opt'});b.className='opt on';$('piw').style.display=v?'none':''}
+function pagoForm(p){var pid=p.id;cerrar();met='Transferencia';var quedan=num(p.restantes)&&p.restantes>0&&!p.espera;espSel=quedan?1:0;
   var op=D.planes.map(function(pl){return '<option value="'+esc(pl.id)+'"'+(pl.id===p.plan?' selected':'')+'>'+esc(pl.nombre)+'</option>'}).join('');
   var pr=(D.planes.filter(function(x){return x.id===p.plan})[0]||{}).precio;var hoy=iso(new Date());
   abrir('<h3>Pago de '+esc(p.nombre)+'</h3><p>Revisa y confirma.</p><label for="pp">Plan</label><select id="pp" onchange="cambiaPlan()">'+op+'</select>'+
   '<label for="pm">Monto</label><input id="pm" type="number" inputmode="numeric" value="'+(pr===''||pr==null?'':pr)+'">'+
   '<label>Método</label><div class="opts"><button class="opt on" onclick="selM(this,\'Transferencia\')">Transferencia</button><button class="opt" onclick="selM(this,\'Efectivo\')">Efectivo</button><button class="opt" onclick="selM(this,\'Otro\')">Otro</button></div>'+
   '<label for="pf">Fecha del pago</label><input id="pf" type="date" value="'+hoy+'">'+
-  '<label for="pi">Primera sesión de este plan</label><input id="pi" type="date" value="'+hoy+'">'+
+  (quedan?'<label>Aún le quedan '+p.restantes+' sesiones. ¿Este pago parte cuando termine el plan actual?</label><div class="opts"><button class="opt on" onclick="selEsp(this,1)">Sí, cuando termine</button><button class="opt" onclick="selEsp(this,0)">No, parte en otra fecha</button></div>':'')+
+  '<div id="piw"'+(espSel?' style="display:none"':'')+'><label for="pi">Primera sesión de este plan</label><input id="pi" type="date" value="'+hoy+'"></div>'+
+  (quedan?'<p class="nota">Si dices que sí, el pago queda "En espera" y parte solo el día de la primera sesión que ya no cabe en el plan actual.</p>':'')+
   '<button class="big" onclick="guardaPago(\''+pid+'\')">Registrar pago</button><button class="sec" onclick="cerrar()">Cancelar</button>')}
 function cambiaPlan(){var id=$('pp').value,pl=D.planes.filter(function(x){return x.id===id})[0];$('pm').value=pl&&pl.precio!==''?pl.precio:''}
 function selM(b,m){met=m;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className='opt'});b.className='opt on'}
-function guardaPago(pid){var pl=$('pp').value,mo=$('pm').value,f=$('pf').value,i=$('pi').value;
-  if(!mo||!f||!i){toast('Completa el monto y las fechas');return}
+function guardaPago(pid){var pl=$('pp').value,mo=$('pm').value,f=$('pf').value,i=$('pi').value,es=espSel;
+  if(!mo||!f||(!i&&!es)){toast('Completa el monto y las fechas');return}
   cerrar();toast('Registrando pago…',8000);
-  api({a:'pago',pagador:pid,plan:pl,monto:mo,metodo:met,fechaPago:f,inicio:i}).then(function(){toast('Pago registrado');setTimeout(cargar,3000)})
+  api({a:'pago',pagador:pid,plan:pl,monto:mo,metodo:met,fechaPago:f,inicio:i||f,espera:es?1:0}).then(function(r){toast(r==='espera'?'Pago registrado · en espera hasta que termine el plan actual':'Pago registrado',3500);setTimeout(cargar,3000)})
   .catch(function(e){toast('No se registró: '+e.message,4000)})}
 
 /* ---------- Nuevo cliente (anamnesis) ---------- */
@@ -481,7 +485,7 @@ function ficha(id){var c=cli(id);if(!c)return;
   if(c.meso)h+='<button onclick="window.open(\''+esc(c.meso)+'\',\'_blank\')">Abrir MESO</button>';
   if(c.carpeta)h+='<button onclick="window.open(\''+esc(c.carpeta)+'\',\'_blank\')">Abrir carpeta</button>';
   h+='<button onclick="editarAnamnesis(\''+id+'\')">Editar anamnesis</button>';
-  if(c.tel||c.grupo)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2?(c.grupo?'Avisar renovación al grupo':'Avisar renovación'):'WhatsApp')+'</button>';
+  if(c.tel||c.grupo)h+='<button class="wa" onclick="wsp(\''+id+'\')">'+(num(c.restantes)&&c.restantes<=2&&!c.espera?(c.grupo?'Avisar renovación al grupo':'Avisar renovación'):'WhatsApp')+'</button>';
   h+='</div><div class="acts">';
   if(c.estado==='Activo'){h+='<button class="pri" onclick="nuevoMeso(\''+id+'\')">Nuevo MESO</button><button onclick="pago(\''+c.pagador+'\')">Registrar pago</button><button onclick="extender(\''+c.pagador+'\',7)">Extender plazo 1 sem</button>'}
   h+='</div><div class="acts">';
@@ -492,29 +496,32 @@ function ficha(id){var c=cli(id);if(!c)return;
 function pago(pid){var p=D.pagadores.filter(function(x){return x.id===pid})[0];if(!p){toast('Ese cliente no tiene un plan activo',3000);return}pagoForm(p)}
 function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactivo:'dar de baja'}[e];
   if(!confirm('¿Quieres '+t+' a '+c.nombre+'?'+(e==='Inactivo'?'\nDejará de aparecer en la app. Su historial se conserva.':'')))return;
-  cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
+  cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(r){toast(r&&r.bloque?'Listo · '+r.bloque+' pasó a En curso':'Listo',3500);cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 19</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 20</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
   '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
-var mesoSel='',semSel=5;
-function nuevoMeso(id){var c=cli(id);mesoSel='';abrir('<h3>Nuevo MESO · '+esc(c.nombre)+'</h3><p>Buscando en su carpeta…</p>');
-  api({a:'mesos',id:id}).then(function(l){
+var mesoSel='',semSel=5,MESOS=[];
+function nuevoMeso(id){var c=cli(id);mesoSel='';abrir('<h3>Nuevo MESO · '+esc(c.nombre)+'</h3><p>Buscando en su carpeta y leyendo el MESO…</p>');
+  api({a:'mesos',id:id}).then(function(l){MESOS=l||[];
     var h='<h3>Nuevo MESO · '+esc(c.nombre)+'</h3><p>'+(c.grupo?'Se aplica a las dos personas del dúo. ':'')+'Elige el archivo del nuevo MESO.</p>';
     if(!l.length)h+='<p style="color:var(--r)">No encontré planillas nuevas en su carpeta. Crea el MESO en su carpeta de Drive y vuelve a intentarlo.</p>';
-    l.forEach(function(x,i){h+='<button class="cand'+(i===0?' on':'')+'" data-u="'+esc(x.url)+'" onclick="selMeso(this)">'+esc(x.nombre)+'<small>Creado el '+esc(x.fecha)+'</small></button>'});
-    if(l.length)mesoSel=l[0].url;
-    h+='<label>¿Cuántas semanas durará?</label><div class="rpe" style="grid-template-columns:repeat(4,1fr)">'+[4,5,6,8].map(function(n){return '<button'+(n===5?' class="on"':'')+' onclick="selSem(this,'+n+')">'+n+'</button>'}).join('')+'</div>'+
-      '<label for="mi">Primer día del nuevo MESO</label><input id="mi" type="date" value="'+iso(new Date())+'">'+
+    l.forEach(function(x,i){h+='<button class="cand'+(i===0?' on':'')+'" data-i="'+i+'" onclick="selMeso(this)">'+esc(x.nombre)+'<small>Creado el '+esc(x.fecha)+(x.semanas?' · '+x.semanas+' semanas':'')+'</small></button>'});
+    var x0=l[0]||{};if(l.length)mesoSel=l[0].url;semSel=x0.semanas||5;
+    h+='<label>¿Cuántas semanas durará?</label><div class="rpe" id="msem" style="grid-template-columns:repeat(5,1fr)">'+[4,5,6,7,8].map(function(n){return '<button'+(n===semSel?' class="on"':'')+' onclick="selSem(this,'+n+')">'+n+'</button>'}).join('')+'</div>'+
+      '<label for="mi">Primer día del nuevo MESO</label><input id="mi" type="date" value="'+(x0.inicio||iso(new Date()))+'">'+
+      '<p class="nota" id="mleido">'+(x0.inicio||x0.semanas?'Semanas y primer día leídos del MESO (SEMANA 1). Revísalos antes de guardar.':'No pude leer la fecha del MESO: escríbela tú.')+'</p>'+
       (l.length?'<button class="big" onclick="guardaMeso(\''+id+'\')">Abrir nuevo bloque</button>':'')+'<button class="sec" onclick="cerrar()">Cancelar</button>'+
-      '<p class="nota">El bloque actual se cierra el día anterior y el nuevo copia su objetivo, split, frecuencia y RIR.</p>';
-    semSel=5;abrir(h)}).catch(function(x){toast(x.message,4000);cerrar()})}
+      '<p class="nota">El bloque actual se cierra el día anterior ("Fin de meso") y el nuevo copia su objetivo, split, frecuencia y RIR.'+(c.estado==='Pausa'?' Como está en pausa, el nuevo queda <b>Planificado</b> y pasa a "En curso" al reactivarlo.':'')+'</p>';
+    abrir(h)}).catch(function(x){toast(x.message,4000);cerrar()})}
 function selSem(b,n){semSel=n;Array.prototype.forEach.call(b.parentNode.children,function(x){x.className=''});b.className='on'}
-function selMeso(b){mesoSel=b.getAttribute('data-u');Array.prototype.forEach.call(document.querySelectorAll('.cand'),function(x){x.className='cand'});b.className='cand on'}
+function selMeso(b){var x=MESOS[+b.getAttribute('data-i')]||{};mesoSel=x.url;Array.prototype.forEach.call(document.querySelectorAll('.cand'),function(y){y.className='cand'});b.className='cand on';
+  if(x.semanas){semSel=x.semanas;Array.prototype.forEach.call($('msem').children,function(y){y.className=(+y.textContent===x.semanas?'on':'')})}
+  if(x.inicio)$('mi').value=x.inicio;$('mleido').textContent=x.inicio||x.semanas?'Semanas y primer día leídos del MESO (SEMANA 1). Revísalos antes de guardar.':'No pude leer la fecha del MESO: escríbela tú.'}
 function guardaMeso(id){var i=$('mi').value;if(!mesoSel||!i){toast('Elige el archivo y la fecha');return}cerrar();toast('Abriendo bloque…',8000);
-  api({a:'nuevoMeso',id:id,url:mesoSel,semanas:semSel,inicio:i}).then(function(){toast('Nuevo bloque abierto ✓',3000);setTimeout(cargar,2500)}).catch(function(x){toast(x.message,4000)})}
+  api({a:'nuevoMeso',id:id,url:mesoSel,semanas:semSel,inicio:i}).then(function(r){toast(r&&r.estado==='Planificado'?'Nuevo bloque Planificado ✓':'Nuevo bloque abierto ✓',3000);setTimeout(cargar,2500)}).catch(function(x){toast(x.message,4000)})}
 
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG.k&&$('main')&&vista!=='nue'&&vista!=='sem'&&vista!=='mes'){fecha=new Date();pintaTitulo();cargar()}});
 if('serviceWorker' in navigator){var swPrevio=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js').catch(function(){});
