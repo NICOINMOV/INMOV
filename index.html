@@ -249,6 +249,7 @@ function pintar(){
     else D.alertas.forEach(function(a){
       var b='';
       if(/plazo/.test(a.texto))b+='<button class="pri" onclick="extender(\''+a.pagador+'\',7)">Extender 1 semana</button><button onclick="extender(\''+a.pagador+'\',14)">2 semanas</button>';
+      if(a.sinRegistrar)a.sinRegistrar.fechas.forEach(function(f){b+='<button class="pri" onclick="irDia(\''+f+'\')">Registrar '+f.slice(8)+'/'+f.slice(5,7)+'</button><button onclick="noTocaba(\''+a.sinRegistrar.ids.join(',')+'\',\''+f+'\')">No tocaba el '+f.slice(8)+'/'+f.slice(5,7)+'</button>'});
       if(/Pago parcial: falta/.test(a.texto))b+='<button class="pri" onclick="pago(\''+a.pagador+'\')">Registrar lo que falta</button>';
       else if(/Agotado|Por agotar|Vencido|Por vencer|Sin registro/.test(a.texto))b+='<button'+(b?'':' class="pri"')+' onclick="pago(\''+a.pagador+'\')">Registrar pago</button>';
       if(/Bloque/.test(a.texto))b+='<button onclick="nuevoMeso(\''+a.id+'\')">Nuevo MESO</button>';
@@ -520,13 +521,14 @@ function ficha(id){var c=cli(id);if(!c)return;
   if(c.estado!=='Pausa')h+='<button onclick="estado(\''+id+'\',\'Pausa\')">Pausar</button>';
   h+='<button onclick="estado(\''+id+'\',\'Inactivo\')" style="color:var(--r)">Dar de baja</button></div><button class="sec" onclick="cerrar()">Cerrar</button>';
   abrir(h)}
+function noTocaba(ids,f){toast('Guardando…',6000);api({a:'noTocaba',ids:ids.split(','),fecha:f}).then(function(){toast('Listo, no te aviso más ese día',3000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function pago(pid){var p=D.pagadores.filter(function(x){return x.id===pid})[0];if(!p){toast('Ese cliente no tiene un plan activo',3000);return}pagoForm(p)}
 function estado(id,e){var c=cli(id),t={Activo:'reactivar',Pausa:'pausar',Inactivo:'dar de baja'}[e];
   if(!confirm('¿Quieres '+t+' a '+c.nombre+'?'+(e==='Inactivo'?'\nDejará de aparecer en la app. Su historial se conserva.':'')))return;
   cerrar();toast('Guardando…',8000);api({a:'estado',id:id,estado:e}).then(function(r){toast(r&&r.bloque?'Listo · '+r.bloque+' pasó a En curso':'Listo',3500);cargar()}).catch(function(x){toast(x.message,4000)})}
 function extender(pg,dias){cerrar();toast('Extendiendo…',8000);api({a:'extender',pagador:pg,dias:dias}).then(function(f){toast('Plazo hasta el '+f,3000);setTimeout(cargar,2000)}).catch(function(x){toast(x.message,4000)})}
 function menuDia(){var f=DIAS[fecha.getDay()]+' '+fecha.getDate()+'/'+(fecha.getMonth()+1);
-  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 22</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
+  abrir('<h3>Más <small style="font-size:12px;color:var(--g);font-weight:500">· app versión 23</small></h3><button class="big" onclick="cerrar();semRef=new Date(fecha.getTime());ver(\'sem\')">Ver la semana</button><button class="sec" onclick="cerrar();mesRef=new Date(fecha.getFullYear(),fecha.getMonth(),1);ver(\'mes\')">Resumen del mes</button>'+(vista!=='hoy'?'<button class="sec" onclick="cerrar()">Cerrar</button>':'<h3 style="margin-top:22px">'+f+'</h3><p>Si ese día no haces clases, márcalo. A quienes les tocaba se les alarga el plazo del plan, sin descontar nada.</p>'+
   '<button class="big" onclick="marcarLibre(\'Feriado\')">Feriado</button><button class="sec" onclick="marcarLibre(\'Viaje o ausencia mía\')">Viaje o ausencia mía</button><button class="sec" onclick="marcarLibre(\'Sin clases\')">Otro motivo</button><button class="sec" onclick="cerrar()">Cancelar</button>'))}
 function marcarLibre(m){cerrar();toast('Guardando…',8000);api({a:'diaLibre',fecha:iso(fecha),motivo:m}).then(function(r){toast(r.afectados.length?'Plazos alargados: '+r.afectados.join(', '):'Día marcado',4000);cargar()}).catch(function(x){toast(x.message,4000)})}
 function quitarLibre(){if(!confirm('¿Sí hubo clases este día? Se revierten los plazos alargados.'))return;toast('Quitando…',8000);api({a:'quitarDiaLibre',fecha:iso(fecha)}).then(function(){toast('Listo');cargar()}).catch(function(x){toast(x.message,4000)})}
